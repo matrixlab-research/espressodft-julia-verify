@@ -429,7 +429,10 @@ load_reference(path::AbstractString=joinpath(@__DIR__, "..", "oracle", "referenc
 function oracle_atol(path::AbstractString)
     occursin("frequencies_cm1", path) && return 2e-1
     occursin("born_charges", path) && return 5e-5
-    occursin("dielectric", path) && return 1e-6
+    # QE 7.5 differs by about 1.92e-6 for the largest Si dielectric entry
+    # between the pinned x86_64 Linux and aarch64 macOS artifacts. Keep the
+    # reproducibility gate three orders tighter than the candidate tolerance.
+    occursin("dielectric", path) && return 5e-6
     occursin("dynamical_", path) && return 3e-9
     occursin("density_fourier", path) && return 2e-5
     occursin("density_electron_count", path) && return 2e-6
@@ -440,37 +443,57 @@ function oracle_atol(path::AbstractString)
     0.0
 end
 
-function compare_reference(got, expected, path::AbstractString)
+function collect_reference_errors!(errors::Vector{String}, got, expected,
+                                   path::AbstractString)
     if expected isa AbstractDict
         for key in keys(expected)
-            haskey(got, key) || error("oracle output is missing $path.$key")
-            compare_reference(got[key], expected[key], "$path.$key")
+            if !haskey(got, key)
+                push!(errors, "oracle output is missing $path.$key")
+                continue
+            end
+            collect_reference_errors!(errors, got[key], expected[key], "$path.$key")
         end
     elseif expected isa AbstractVector
-        length(got) == length(expected) ||
-            error("oracle shape drift at $path: $(length(got)) != $(length(expected))")
+        if length(got) != length(expected)
+            push!(errors,
+                  "oracle shape drift at $path: $(length(got)) != $(length(expected))")
+            return errors
+        end
         for index in eachindex(expected)
-            compare_reference(got[index], expected[index], "$path[$index]")
+            collect_reference_errors!(errors, got[index], expected[index],
+                                      "$path[$index]")
         end
     elseif expected isa Number
         difference = abs(got - expected)
         tolerance = oracle_atol(path)
-        difference <= tolerance ||
-            error("oracle drift at $path: |$got - $expected| = $difference > $tolerance")
+        difference <= tolerance || push!(
+            errors,
+            "oracle drift at $path: |$got - $expected| = $difference > $tolerance",
+        )
     else
-        got == expected || error("oracle metadata drift at $path: $got != $expected")
+        got == expected || push!(errors,
+                                 "oracle metadata drift at $path: $got != $expected")
     end
+    errors
+end
+
+function compare_reference(got, expected, path::AbstractString)
+    errors = String[]
+    collect_reference_errors!(errors, got, expected, path)
+    isempty(errors) || error(join(errors, '\n'))
     true
 end
 
 function check_reference(reference::AbstractDict, generated::AbstractDict)
     reference["spec_id"] == SPEC_ID || error("reference specification mismatch")
     reference["qe_version"] == QE_VERSION || error("reference QE version mismatch")
+    errors = String[]
     for fixture in oracle_fixtures()
         expected = reference["fixtures"][fixture.name]
         got = generated["fixtures"][fixture.name]
-        compare_reference(got, expected, "fixtures.$(fixture.name)")
+        collect_reference_errors!(errors, got, expected, "fixtures.$(fixture.name)")
     end
+    isempty(errors) || error("oracle reference mismatch:\n" * join(errors, '\n'))
     true
 end
 
