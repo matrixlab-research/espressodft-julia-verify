@@ -1,0 +1,17 @@
+name = "QuantumDFTVerify"
+uuid = "df9b6be2-9af5-4916-ac6b-33a90a5b3645"
+authors = ["QuantumDFT verification maintainers"]
+version = "0.1.0"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+PseudoPotentialData = "5751a51d-ac76-4487-a056-413ecf6fbe19"
+QuantumEspresso_jll = "74603b90-2fcf-5710-a7d7-830b31b8b33c"
+SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
+TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[compat]
+PseudoPotentialData = "0.3.2"
+QuantumEspresso_jll = "=7.5.0"
+julia = "1.12"

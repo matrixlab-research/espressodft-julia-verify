@@ -1,0 +1,61 @@
+name: QuantumDFT verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      candidate_repository:
+        description: GitHub owner/repository for the candidate package
+        required: true
+        default: kunyuan/QuantumDFT.jl
+      candidate_ref:
+        description: Immutable commit SHA or branch to verify
+        required: true
+        default: main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quantumdft-verify-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 ci/check_contract_coverage.py
+
+  oracle:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - run: julia --project=. oracle/generate_reference.jl --check
+
+  candidate:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [contract, oracle]
+    runs-on: macos-14
+    timeout-minutes: 180
+    env:
+      CANDIDATE_REPOSITORY: ${{ inputs.candidate_repository }}
+      CANDIDATE_REF: ${{ inputs.candidate_ref }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - run: julia --project=. ci/runcandidate.jl
