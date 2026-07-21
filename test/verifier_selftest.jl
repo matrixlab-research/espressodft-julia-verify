@@ -16,7 +16,7 @@ end
         ("fixtures.x.gamma_eigenvalues_ha[1]", 1e-3),
         ("fixtures.x.density_fourier.1,0,0[1]", 1e-3),
         ("fixtures.x.phonons.q.dynamical_real[1]", 1e-8),
-        ("fixtures.x.phonons.q.frequencies_cm1_raw[1]", 5e-1),
+        ("fixtures.x.phonons.q.frequencies_cm1_raw[1]", 2.0),
         ("fixtures.x.phonons.q.born_charges_asr[1]", 1e-3),
         ("fixtures.x.phonons.q.dielectric[1]", 1e-2),
     )

@@ -426,10 +426,13 @@ end
 load_reference(path::AbstractString=joinpath(@__DIR__, "..", "oracle", "reference.toml")) =
     TOML.parsefile(path)
 
-function oracle_atol(path::AbstractString)
-    # Near-zero AlN Gamma modes differ by 0.217 cm^-1 across pinned QE 7.5
-    # Linux/macOS artifacts; this remains far below the 2 cm^-1 candidate gate.
-    occursin("frequencies_cm1", path) && return 3e-1
+function oracle_atol(path::AbstractString, expected=nothing)
+    if occursin("frequencies_cm1", path)
+        # Square-rooting tiny acoustic eigenvalues amplifies otherwise accepted
+        # 1e-9-scale matrix noise. Protect the matrix separately and use a
+        # still-sub-candidate 1 cm^-1 reproducibility gate only for soft modes.
+        return expected isa Number && abs(expected) < 20 ? 1.0 : 2e-1
+    end
     occursin("born_charges", path) && return 5e-5
     # QE 7.5 differs by about 1.92e-6 for the largest Si dielectric entry
     # between the pinned x86_64 Linux and aarch64 macOS artifacts. Keep the
@@ -467,7 +470,7 @@ function collect_reference_errors!(errors::Vector{String}, got, expected,
         end
     elseif expected isa Number
         difference = abs(got - expected)
-        tolerance = oracle_atol(path)
+        tolerance = oracle_atol(path, expected)
         difference <= tolerance || push!(
             errors,
             "oracle drift at $path: |$got - $expected| = $difference > $tolerance",
