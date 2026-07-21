@@ -1,6 +1,6 @@
-# EspressoDFT — Contract (frozen V0)
+# EspressoDFT — Contract (frozen differentiable V0)
 
-> Frozen clean-room specification `espressodft-v0.2-qe7.5-2026-07-21`.
+> Frozen clean-room specification `espressodft-v0.3-qe7.5-2026-07-21`.
 > Everything in this file is immutable for the V0 implementation task. A
 > change requires a new specification identifier and regeneration of both
 > visible and private tests.
@@ -11,6 +11,12 @@ Deliver a standard Julia package named `EspressoDFT`, compatible with Julia
 1.12 or later and licensed under MIT. It exports exactly the symbols in the
 Public API table below. Internal modules, algorithms, storage, and solver
 choices are unrestricted provided the observable contract is met.
+
+The package must provide backend-neutral `ChainRulesCore.frule` and
+`ChainRulesCore.rrule` semantics for the differentiable public compositions
+defined below. `ChainRulesCore` may be a package dependency; a particular AD
+frontend such as Zygote, Enzyme, or ForwardDiff must not be required to use the
+ordinary primal API and is not an additional public export.
 
 The package is an independent clean-room implementation, not an official
 Quantum ESPRESSO distribution or a project endorsed by its Foundation.
@@ -35,6 +41,13 @@ The valid domain is:
 - phonon q vectors in reduced reciprocal coordinates for which `k+q` is a
   permutation of the full electronic k mesh.
 
+Within this domain, the continuous differential variables in V0 are Cartesian
+atomic positions and homogeneous cell strain with fractional positions held
+fixed. Atomic species, pseudopotential identity, functional choice, charge,
+spin, plane-wave cutoff, reciprocal/FFT index sets, k mesh, band count,
+occupation pattern, q-mesh topology, and solver options are nondifferentiable
+configuration data.
+
 Inputs outside this domain must be rejected explicitly; silently replacing an
 unsupported feature by a supported approximation is a contract failure.
 
@@ -53,6 +66,9 @@ unsupported feature by a supported approximation is a contract failure.
 - Atom indices and Cartesian directions are one-based.
 - The dynamical matrix uses Cartesian atomic coordinates and
   `D[I,a,J,b] = Phi[I,a,J,b] / sqrt(M[I] M[J])`, with masses in electron masses.
+- At Gamma, `response(gs, AtomicDisplacement(I,a,(0,0,0))).delta_density`
+  is the derivative of the periodic density grid with respect to a unit
+  Cartesian displacement of atom `I` in direction `a`, measured per bohr.
 - Phonon frequencies are signed square roots of dynamical-matrix eigenvalues,
   in atomic angular-frequency units; negative values denote imaginary modes.
 
@@ -80,6 +96,13 @@ native conventions exactly once at the compatibility boundary.
   within degenerate groups; eigenvectors are compared by subspace projectors.
 - `polar` means Born effective charges within `5e-4` and dielectric-tensor
   entries within `5e-3` relative/absolute.
+- `ad-gradient` means an AD directional derivative agrees with the corresponding
+  public force, stress, or density response within `5e-5` absolute plus `5e-5`
+  relative after accounting for units and sign.
+- `ad-duality` means direct and adjoint scalar contractions agree within `2e-6`
+  absolute plus `2e-5` relative.
+- `ad-second` means a derivative of force agrees with the mass-unweighted
+  Gamma force-constant entry within `2e-7` absolute plus `5e-4` relative.
 
 Numerical oracle comparisons use the same structure, pseudopotential bytes,
 cutoff, k mesh, q, functional, and convergence thresholds. Bitwise equality
@@ -97,11 +120,11 @@ with QE is not required.
 | `API-006` | `AtomicDisplacement` | `AtomicDisplacement(atom::Integer, direction::Integer, q::NTuple{3,<:Real})` | immutable perturbation; `exact` | valid atom; direction in `1:3`; finite q commensurate with the basis k mesh |
 | `API-007` | `read_qe_input` | `read_qe_input(path::AbstractString)` and `read_qe_input(io::IO)` | `QEInput`; semantic equivalence | scoped QE 7.5 `pw.x` input |
 | `API-008` | `run_qe_input` | `run_qe_input(input::QEInput)` and path/IO convenience methods | same opaque ground-state result as `ground_state` | parsed calculation is `scf` and otherwise inside V0 |
-| `API-009` | `ground_state` | `ground_state(basis::PlaneWaveBasis; options::SCFOptions=SCFOptions())` | opaque converged result | valid V0 basis; convergence achieved |
-| `API-010` | `energy` | `energy(gs)` | scalar; `energy` | converged ground state |
-| `API-011` | `forces` | `forces(gs)` | real `3×N`; `force` | converged ground state |
-| `API-012` | `stress` | `stress(gs)` | symmetric real `3×3`; `stress` | converged ground state |
-| `API-013` | `density` | `density(gs)` | named tuple `(values, cell_volume)`; `density` | `values` is a real three-dimensional periodic grid |
+| `API-009` | `ground_state` | `ground_state(basis::PlaneWaveBasis; options::SCFOptions=SCFOptions())` | opaque converged result; differentiable implicit layer | valid V0 basis; convergence achieved |
+| `API-010` | `energy` | `energy(gs)` | scalar; `energy`, `ad-gradient` | converged ground state |
+| `API-011` | `forces` | `forces(gs)` | real `3×N`; `force`, `ad-second` | converged ground state |
+| `API-012` | `stress` | `stress(gs)` | symmetric real `3×3`; `stress`, `ad-gradient` | converged ground state |
+| `API-013` | `density` | `density(gs)` | named tuple `(values, cell_volume)`; `density`, `ad-duality` | `values` is a real three-dimensional periodic grid |
 | `API-014` | `eigenvalues` | `eigenvalues(gs)` | vector per full k point; `band` | same k-point order as canonical full mesh |
 | `API-015` | `occupations` | `occupations(gs)` | vector per full k point; `num(1e-12,1e-12)` | occupations include spin degeneracy and integrate to electron number with k weights |
 | `API-016` | `response` | `response(gs, perturbation::AtomicDisplacement; tolerance::Real=1e-8, maxiter::Integer=200)` | named tuple `(delta_density, residual_norm, converged)`; `response-density` | positive tolerance and `maxiter`; perturbation in V0 response domain |
@@ -135,6 +158,68 @@ mutating a retrieved array must not mutate the originating object.
 `((i-1)/n1,(j-1)/n2,(k-1)/n3)`, where `(n1,n2,n3)=size(values)`. The complex
 `response(...).delta_density` uses the same grid and origin. This convention
 freezes low-order reciprocal coefficients without freezing an FFT library.
+
+## Differentiability contract
+
+Differentiability is a required behaviour of the existing public API and does
+not add exported symbols. For fixed nondifferentiable configuration `c`, define
+the public composite
+
+```text
+z*(theta) = ground_state(PlaneWaveBasis(KSModel(Crystal(theta; c); c); c); c)
+```
+
+where `theta` contains a Cartesian position matrix or a scalar homogeneous-
+strain amplitude. A `ChainRulesCore`-compatible AD frontend must be able to
+differentiate real scalar functions formed from `energy(z*)`, `forces(z*)`, or
+real weighted contractions of `density(z*).values`. The package may implement
+custom rules at any granularity, but the following semantics are frozen.
+
+- `DIF-001`: for Cartesian differentiation, `Crystal` is constructed with
+  `positions_are_fractional=false`; the gradient of converged energy with
+  respect to the `3×N` Cartesian position matrix equals `-forces(gs)`.
+- `DIF-002`: for strain differentiation, `h(t)=(I+t*eta)h` with symmetric
+  dimensionless `eta` and fixed fractional positions. At `t=0`,
+  `dE/dt = Omega * sum(stress(gs) .* eta)`.
+- `DIF-003`: derivatives use the reciprocal integer G lists and FFT topology
+  selected at the primal point. This frozen-topology tangent convention is
+  piecewise differentiable and does not define derivatives with respect to
+  `Ecut`, `kgrid`, `fft_size`, band count, occupation choices, or q labels.
+  Visible finite-difference checks use perturbations that preserve topology.
+- `DIF-004`: `ground_state` is differentiated as the converged constrained
+  stationary equation `F(z*(theta),theta)=0`. A JVP solves
+  `F_z*delta_z=-F_theta*delta_theta`; a VJP solves the corresponding adjoint
+  system. Differentiating stored SCF, mixing, or eigensolver iterations is not
+  the contracted derivative.
+- `DIF-005`: complex-valued orbital, response, FFT, projector, eigenspace, and
+  linear-solve rules use the real scalar objective convention
+  `real(dot(cotangent, tangent))`. JVP and VJP contractions obey adjoint duality
+  under this convention within `ad-duality` tolerance.
+- `DIF-006`: eigensolver and orthogonalization derivatives are defined for the
+  occupied subspace projector. They are invariant under phase changes and
+  arbitrary unitary rotations inside a degenerate occupied subspace; no
+  derivative of an individually labelled degenerate eigenvector is promised.
+- `DIF-007`: the Gamma density JVP for a Cartesian atomic direction equals
+  `response(gs, AtomicDisplacement(...)).delta_density` within `ad-gradient`
+  tolerance. Conversely, the VJP of any finite real weighted density-grid
+  contraction satisfies `DIF-005` against that direct response.
+- `DIF-008`: differentiating `forces(gs)` with respect to Cartesian positions
+  yields the negative mass-unweighted Gamma force constants. Equivalently,
+  `d forces[I,a] / d R[J,b] = -sqrt(M[I]*M[J]) * D[I,a,J,b]` under the matrix
+  indexing convention above, within `ad-second` tolerance.
+- `DIF-009`: changing SCF convergence history while reaching the same
+  stationary solution does not change derivatives beyond the error implied by
+  the primal and adjoint residuals. The reverse pass stores no tape whose size
+  grows with the number of completed SCF iterations.
+- `DIF-010`: an unconverged primal or adjoint/response solve raises
+  `ErrorException` containing `did not converge`; it must not return a zero,
+  NaN, truncated-unroll, or falsely converged derivative.
+
+Fractional coordinate wrapping, a change of discrete basis topology, a gap
+closure, or a change of occupation is outside a single differentiable chart.
+V0 fixtures avoid these boundaries. V0 guarantees the first derivatives and
+selected second derivatives above; arbitrary nesting to third and higher order
+is not part of this specification.
 
 ## Detailed behavioural clauses
 
@@ -258,7 +343,11 @@ V0 accepts only plain-text `pw.x` SCF inputs with:
   combinations, but may not introduce behaviour absent from this contract.
 - Verification uses QE 7.5.0, identified pseudopotential-family versions and
   file SHA-256 values, and original clean-room inputs.
+- Differentiability verification uses a pinned ChainRules-compatible Julia AD
+  frontend only as a consumer of the candidate's declared rules. The candidate
+  must not depend on that frontend for ordinary primal calculations.
 - Passing visible examples is necessary but not sufficient. Completion also
-  requires private unit, property, differential, and end-to-end tests.
+  requires private unit, property, AD duality, differential, and end-to-end
+  tests.
 - Performance measurements are reported but do not fail V0 correctness unless
   a calculation exceeds its declared resource ceiling or cannot finish.

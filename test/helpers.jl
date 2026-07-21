@@ -35,6 +35,75 @@ function candidate_state(fixture::QEFixture)
     end
 end
 
+function candidate_basis_from_geometry(
+    fixture::QEFixture;
+    lattice=fixture.lattice_bohr,
+    positions=fixture.positions_fractional,
+    positions_are_fractional::Bool=true,
+)
+    crystal = Crystal(
+        lattice,
+        fixture.species,
+        positions;
+        masses=native_masses(fixture),
+        positions_are_fractional,
+    )
+    model = KSModel(
+        crystal;
+        pseudopotentials=pseudopotential_paths(fixture),
+        xc=fixture.input_dft == "LDA" ? :lda : :pbe,
+    )
+    PlaneWaveBasis(model; Ecut=fixture.ecut_ry / 2, kgrid=fixture.kgrid)
+end
+
+function candidate_state_from_geometry(
+    fixture::QEFixture;
+    lattice=fixture.lattice_bohr,
+    positions=fixture.positions_fractional,
+    positions_are_fractional::Bool=true,
+    options=SCFOptions(
+        energy_tolerance=1e-10,
+        density_tolerance=1e-8,
+        maxiter=120,
+        extra_bands=4,
+    ),
+)
+    basis = candidate_basis_from_geometry(
+        fixture;
+        lattice,
+        positions,
+        positions_are_fractional,
+    )
+    ground_state(basis; options)
+end
+
+cartesian_positions(fixture::QEFixture) =
+    fixture.lattice_bohr * fixture.positions_fractional
+
+candidate_energy_from_cartesian(fixture::QEFixture, positions; options=SCFOptions(maxiter=120)) =
+    energy(candidate_state_from_geometry(
+        fixture;
+        positions,
+        positions_are_fractional=false,
+        options,
+    ))
+
+function candidate_density_contraction(
+    fixture::QEFixture,
+    positions,
+    cotangent;
+    options=SCFOptions(maxiter=120),
+)
+    gs = candidate_state_from_geometry(
+        fixture;
+        positions,
+        positions_are_fractional=false,
+        options,
+    )
+    rho = density(gs)
+    sum(cotangent .* rho.values) * rho.cell_volume / length(rho.values)
+end
+
 fixture_reference(fixture::QEFixture) = REFERENCE["fixtures"][fixture.name]
 
 function rows_to_matrix(rows)

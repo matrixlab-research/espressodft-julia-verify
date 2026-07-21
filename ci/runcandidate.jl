@@ -6,10 +6,17 @@ const ROOT = normpath(joinpath(@__DIR__, ".."))
 const RUNNER_ENV = mktempdir(prefix="espressodft-candidate-")
 Pkg.activate(RUNNER_ENV)
 Pkg.develop(PackageSpec(path=ROOT))
-# Test helpers intentionally use the pseudopotential fixture API directly.
-# Make it a direct runner dependency instead of relying on transitive loading.
-Pkg.add(PackageSpec(name="PseudoPotentialData",
-                    uuid=Base.UUID("5751a51d-ac76-4487-a056-413ecf6fbe19")))
+# Candidate tests intentionally use fixture and AD-consumer APIs directly.
+# Make them runner dependencies instead of relying on transitive loading from
+# EspressoDFTVerify; the candidate itself need not depend on Zygote.
+Pkg.add([
+    PackageSpec(name="PseudoPotentialData",
+                uuid=Base.UUID("5751a51d-ac76-4487-a056-413ecf6fbe19")),
+    PackageSpec(name="ChainRulesCore",
+                uuid=Base.UUID("d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4")),
+    PackageSpec(name="Zygote",
+                uuid=Base.UUID("e88e6eb3-aa80-5325-afca-941959d7151f")),
+])
 
 repository = get(ENV, "CANDIDATE_REPOSITORY", "kunyuan/EspressoDFT.jl")
 reference = get(ENV, "CANDIDATE_REF", "main")

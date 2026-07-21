@@ -37,7 +37,7 @@ end
         log = read(path, String)
         @test process.exitcode != 0
         @test occursin("Test Failed", log)
-        @test occursin(r"(?:UT|PT|RT|IT)-\d{3}", log)
+        @test occursin(r"(?:UT|PT|RT|AD|IT)-\d{3}", log)
     end
 end
 
@@ -54,4 +54,17 @@ end
     @test occursin("repository_dispatch:", workflow)
     @test occursin("workflow_call:", workflow)
     @test occursin("ci/runcandidate.jl", workflow)
+end
+
+@testset "VT-006 differentiability gate is executable" begin
+    project = read(joinpath(ROOT, "Project.toml"), String)
+    tests = read(joinpath(ROOT, "test", "integration", "differentiability.jl"), String)
+    @test occursin("ChainRulesCore", project)
+    @test occursin("Zygote", project)
+    @test occursin("Zygote.gradient", tests)
+    @test occursin("ChainRulesCore.rrule", tests)
+    @test occursin("response(", tests)
+    @test occursin("dynamical_matrix(", tests)
+    @test length(collect(eachmatch(r"@testset \"AD-\d{3}", tests))) == 7
+    @test occursin("@testset \"IT-006", tests)
 end

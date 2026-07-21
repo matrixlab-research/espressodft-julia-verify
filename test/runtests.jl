@@ -1,10 +1,12 @@
 using Test
 using LinearAlgebra
+using ChainRulesCore
 using PseudoPotentialData
 using EspressoDFTVerify
 using SHA
 using TOML
 using EspressoDFT
+using Zygote
 
 const EXPECTED_EXPORTS = Set([
     :Crystal, :KSModel, :PlaneWaveBasis, :SCFOptions, :QEInput,
@@ -25,3 +27,4 @@ include("unit/objects.jl")
 include("unit/qe_input.jl")
 include("integration/ground_state.jl")
 include("integration/response_phonons.jl")
+include("integration/differentiability.jl")

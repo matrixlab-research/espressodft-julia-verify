@@ -28,8 +28,8 @@ private_files = {
 }
 private_text = "\n".join(private_files.values())
 
-contract_pattern = r"(?:API|CRY|MOD|BAS|SCF|OBS|RSP|DYN|PHN|POL|QEI)-\d{3}"
-test_pattern = r"(?:UT|PT|RT|IT)-\d{3}"
+contract_pattern = r"(?:API|CRY|MOD|BAS|SCF|OBS|RSP|DYN|PHN|POL|QEI|DIF)-\d{3}"
+test_pattern = r"(?:UT|PT|RT|AD|IT)-\d{3}"
 verifier_test_pattern = r"VT-\d{3}"
 
 contract_ids = set(re.findall(contract_pattern, contract_text))
@@ -123,6 +123,14 @@ for required_call in (
 ):
     if required_call not in heldout_body:
         errors.append(f"IT-005 does not exercise {required_call}")
+
+differentiable_body = testset_bodies.get("IT-006", "")
+for required_call in (
+    "Zygote.gradient", "candidate_energy_from_cartesian", "density",
+    "response", "forces", "dynamical_matrix", "ChainRulesCore.rrule",
+):
+    if required_call not in differentiable_body:
+        errors.append(f"IT-006 does not exercise {required_call}")
 
 if errors:
     print("contract coverage FAILED", file=sys.stderr)

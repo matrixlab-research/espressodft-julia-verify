@@ -4,14 +4,18 @@ authors = ["EspressoDFT verification maintainers"]
 version = "0.1.0"
 
 [deps]
+ChainRulesCore = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 PseudoPotentialData = "5751a51d-ac76-4487-a056-413ecf6fbe19"
 QuantumEspresso_jll = "74603b90-2fcf-5710-a7d7-830b31b8b33c"
 SHA = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
 [compat]
+ChainRulesCore = "1"
 PseudoPotentialData = "0.3.2"
 QuantumEspresso_jll = "=7.5.0"
+Zygote = "0.7"
 julia = "1.12"

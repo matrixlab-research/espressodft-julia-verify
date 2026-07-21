@@ -1,7 +1,7 @@
 # EspressoDFT private verification
 
 Private black-box verification for frozen specification
-`espressodft-v0.2-qe7.5-2026-07-21`.
+`espressodft-v0.3-qe7.5-2026-07-21`.
 
 EspressoDFT is an independent MIT-licensed clean-room project. It is not
 affiliated with or endorsed by the Quantum ESPRESSO Foundation; Quantum
@@ -17,6 +17,12 @@ This repository has three independent gates:
 3. **candidate verification** — a requested `EspressoDFT.jl` repository/ref is
    installed into this project and tested only through its documented public
    boundary.
+
+The candidate gate also treats the converged ground state as a differentiable
+implicit layer. A pinned ChainRules-compatible consumer checks energy/force and
+energy/stress gradients, direct/adjoint density-response duality, selected
+second derivatives, failure semantics, and bounded pullback storage. The
+candidate is not required to depend on the verifier's AD frontend.
 
 Private tests hide structures, values, and parameter combinations. They do
 not add undocumented semantics. QE source and QE tests are not copied here;
