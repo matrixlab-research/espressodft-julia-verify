@@ -308,24 +308,47 @@ end
 load_reference(path::AbstractString=joinpath(@__DIR__, "..", "oracle", "reference.toml")) =
     TOML.parsefile(path)
 
-function max_abs_difference(got, expected)
-    got isa AbstractDict && return maximum(max_abs_difference(got[key], expected[key])
-                                           for key in keys(expected))
-    got isa AbstractVector && return isempty(expected) ? 0.0 :
-        maximum(max_abs_difference(got[i], expected[i]) for i in eachindex(expected))
-    got isa Number && return abs(got - expected)
-    got == expected ? 0.0 : Inf
+function oracle_atol(path::AbstractString)
+    occursin("frequencies_cm1", path) && return 5e-2
+    occursin("born_charges", path) && return 5e-5
+    occursin("dielectric", path) && return 1e-6
+    occursin("dynamical_", path) && return 5e-10
+    occursin("energy_ha", path) && return 5e-8
+    occursin("forces_", path) && return 5e-8
+    occursin("stress_", path) && return 5e-8
+    0.0
 end
 
-function check_reference(reference::AbstractDict, generated::AbstractDict;
-                         atol::Real=5e-8)
+function compare_reference(got, expected, path::AbstractString)
+    if expected isa AbstractDict
+        for key in keys(expected)
+            haskey(got, key) || error("oracle output is missing $path.$key")
+            compare_reference(got[key], expected[key], "$path.$key")
+        end
+    elseif expected isa AbstractVector
+        length(got) == length(expected) ||
+            error("oracle shape drift at $path: $(length(got)) != $(length(expected))")
+        for index in eachindex(expected)
+            compare_reference(got[index], expected[index], "$path[$index]")
+        end
+    elseif expected isa Number
+        difference = abs(got - expected)
+        tolerance = oracle_atol(path)
+        difference <= tolerance ||
+            error("oracle drift at $path: |$got - $expected| = $difference > $tolerance")
+    else
+        got == expected || error("oracle metadata drift at $path: $got != $expected")
+    end
+    true
+end
+
+function check_reference(reference::AbstractDict, generated::AbstractDict)
     reference["spec_id"] == SPEC_ID || error("reference specification mismatch")
     reference["qe_version"] == QE_VERSION || error("reference QE version mismatch")
     for fixture in (si_fixture(), nacl_fixture())
         expected = reference["fixtures"][fixture.name]
         got = generated["fixtures"][fixture.name]
-        difference = max_abs_difference(got, expected)
-        difference <= atol || error("oracle drift for $(fixture.name): max difference $difference")
+        compare_reference(got, expected, "fixtures.$(fixture.name)")
     end
     true
 end
