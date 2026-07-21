@@ -24,9 +24,9 @@ end
     second = ground_state(candidate_basis(fixture); options=SCFOptions(maxiter=120))
     @test isapprox(energy(first), energy(second); atol=5e-7, rtol=5e-8)
     @test density(first).values ≈ density(second).values atol=2e-5 rtol=2e-5
-    @test all(a ≈ b atol=5e-6 rtol=5e-6 for (a, b) in
+    @test all(isapprox(a, b; atol=5e-6, rtol=5e-6) for (a, b) in
               zip(eigenvalues(first), eigenvalues(second)))
-    @test all(a ≈ b atol=1e-12 rtol=1e-12 for (a, b) in
+    @test all(isapprox(a, b; atol=1e-12, rtol=1e-12) for (a, b) in
               zip(occupations(first), occupations(second)))
 end
 
@@ -69,17 +69,24 @@ end
 
 @testset "PT-007 stress finite difference and symmetry" begin
     fixture = aln_fixture()
-    step = 5e-4
+    # Keep the exact integer G lists selected at the primal point, as required
+    # by DIF-003.  At 5e-4 several AlN plane waves cross the hard cutoff and
+    # the quotient measures a Pulay topology jump instead of V0 stress.
+    step = 1e-4
     strain = zeros(3, 3)
     strain[1, 1] = step
-    plus = candidate_state(strained_fixture(fixture, strain))
-    minus = candidate_state(strained_fixture(fixture, -strain))
+    plus_fixture = strained_fixture(fixture, strain)
+    minus_fixture = strained_fixture(fixture, -strain)
+    @test candidate_basis(plus_fixture).G_vectors == candidate_basis(fixture).G_vectors
+    @test candidate_basis(minus_fixture).G_vectors == candidate_basis(fixture).G_vectors
+    plus = candidate_state(plus_fixture)
+    minus = candidate_state(minus_fixture)
     volume = abs(det(fixture.lattice_bohr))
     finite_difference = (energy(plus) - energy(minus)) / (2step * volume)
     sigma = stress(candidate_state(fixture))
     @test sigma ≈ sigma' atol=5e-8
     @test abs(sigma[1, 1]) > 1e-6
-    @test isapprox(sigma[1, 1], finite_difference; atol=5e-5, rtol=5e-5)
+    @test isapprox(sigma[1, 1], -finite_difference; atol=5e-5, rtol=5e-5)
 end
 
 @testset "PT-008 band and occupation structure" begin

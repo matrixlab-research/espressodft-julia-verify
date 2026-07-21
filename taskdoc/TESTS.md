@@ -63,7 +63,7 @@ private fixtures.
 | `PT-004` | `API-013`, `SCF-003`, `OBS-004` | integrate `density(gs).values` using its cell volume and grid size | electron count agrees within `2e-7`; values are finite, real, and periodic |
 | `PT-005` | `API-010`, `SCF-004` | take a directional derivative of energy along a mixed atomic displacement | derivative agrees with the corresponding projection of public forces within finite-difference tolerance |
 | `PT-006` | `API-011`, `OBS-002` | use a non-equilibrium structure and at least three symmetric decreasing steps | finite-difference forces converge toward `forces(gs)` before numerical noise dominates; a constant-zero force fails |
-| `PT-007` | `API-012`, `OBS-003` | apply symmetric cell strains and compare energy differences | finite-difference stress converges to `stress(gs)` and the tensor is symmetric |
+| `PT-007` | `API-012`, `OBS-003` | apply symmetric cell strains and compare energy differences | negative finite-difference energy derivative converges to the QE-convention `stress(gs)` and the tensor is symmetric |
 | `PT-008` | `API-014`, `API-015`, `OBS-005` | inspect eigenvalues and occupations on the full mesh | outer lengths equal number of full k points; band lengths pair; weighted occupations equal electron count |
 | `PT-009` | `SCF-005` | permute atoms consistently in the crystal and pseudopotential mapping | energy is unchanged; forces and atom-indexed data undergo only the corresponding permutation |
 
