@@ -1,7 +1,11 @@
-# QuantumDFT private verification
+# EspressoDFT private verification
 
 Private black-box verification for frozen specification
-`quantumdft-v0.2-qe7.5-2026-07-21`.
+`espressodft-v0.2-qe7.5-2026-07-21`.
+
+EspressoDFT is an independent MIT-licensed clean-room project. It is not
+affiliated with or endorsed by the Quantum ESPRESSO Foundation; Quantum
+ESPRESSO is named only as the external compatibility target and oracle.
 
 This repository has three independent gates:
 
@@ -10,7 +14,7 @@ This repository has three independent gates:
 2. **oracle integrity** — original inputs are rerun with
    `QuantumEspresso_jll` 7.5.0 and versioned NC-UPF artifacts, then compared to
    the checked-in observations; and
-3. **candidate verification** — a requested `QuantumDFT.jl` repository/ref is
+3. **candidate verification** — a requested `EspressoDFT.jl` repository/ref is
    installed into this project and tested only through its documented public
    boundary.
 
@@ -24,7 +28,7 @@ QE is executed as a pinned black-box oracle.
 python3 ci/check_contract_coverage.py
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=. oracle/generate_reference.jl --check
-CANDIDATE_REPOSITORY=owner/QuantumDFT.jl CANDIDATE_REF=main \
+CANDIDATE_REPOSITORY=owner/EspressoDFT.jl CANDIDATE_REF=main \
   julia --project=. ci/runcandidate.jl
 ```
 

@@ -110,7 +110,7 @@ if undeclared:
     errors.append("private test IDs absent from TESTS.md: " + ", ".join(sorted(undeclared)))
 
 spec_ids = set(re.findall(
-    r"quantumdft-v[^`\s\"]+", motivation_text + contract_text + visible_text + MANIFEST
+    r"espressodft-v[^`\s\"]+", motivation_text + contract_text + visible_text + MANIFEST
 ))
 if len(spec_ids) != 1:
     errors.append("specification ID is absent or inconsistent: " + repr(sorted(spec_ids)))

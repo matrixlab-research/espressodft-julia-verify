@@ -1,6 +1,6 @@
-# QuantumDFT — Visible unit and integration tests
+# EspressoDFT — Visible unit and integration tests
 
-> Frozen clean-room specification `quantumdft-v0.2-qe7.5-2026-07-21`.
+> Frozen clean-room specification `espressodft-v0.2-qe7.5-2026-07-21`.
 > These tests are the visible floor. The private suite uses different crystal
 > parameters, pseudopotentials, q points, and numerical observations while
 > testing only behaviour declared in `CONTRACT.md`.

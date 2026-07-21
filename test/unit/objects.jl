@@ -62,7 +62,7 @@ end
 
     oxygen_crystal = Crystal(fixture.lattice_bohr, [:O, :O],
                              fixture.positions_fractional;
-                             masses=fill(15.999 * QuantumDFTVerify.AMU_TO_ELECTRON_MASS, 2))
+                             masses=fill(15.999 * EspressoDFTVerify.AMU_TO_ELECTRON_MASS, 2))
     paw = pseudofile(mixed, :O)
     @test occursin("PAW", read(paw, String))
     @test_throws ArgumentError KSModel(oxygen_crystal;

@@ -1,4 +1,4 @@
-module QuantumDFTVerify
+module EspressoDFTVerify
 
 using LinearAlgebra
 using PseudoPotentialData
@@ -11,7 +11,7 @@ export SPEC_ID, CM1_PER_ATOMIC_FREQUENCY, BOHR_TO_ANGSTROM, QEFixture,
        pseudopotential_paths, pseudopotential_hashes, write_pw_input,
        run_oracle, check_reference, load_reference
 
-const SPEC_ID = "quantumdft-v0.2-qe7.5-2026-07-21"
+const SPEC_ID = "espressodft-v0.2-qe7.5-2026-07-21"
 const QE_VERSION = "7.5.0+0"
 const AMU_TO_ELECTRON_MASS = 1822.888486209
 const CM1_PER_ATOMIC_FREQUENCY = 219474.63136320
@@ -368,7 +368,7 @@ function run_program(product::Function, arguments::Cmd, stdout_path::AbstractStr
 end
 
 function run_oracle(fixture::QEFixture)
-    mktempdir(prefix="quantumdft-qe75-") do workdir
+    mktempdir(prefix="espressodft-qe75-") do workdir
         outdir = joinpath(workdir, "scratch")
         mkpath(outdir)
         pseudos = pseudopotential_paths(fixture)

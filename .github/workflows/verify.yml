@@ -1,4 +1,4 @@
-name: QuantumDFT verification
+name: EspressoDFT verification
 
 on:
   push:
@@ -25,7 +25,7 @@ on:
       candidate_repository:
         description: GitHub owner/repository for the candidate package
         required: true
-        default: kunyuan/QuantumDFT.jl
+        default: kunyuan/EspressoDFT.jl
       candidate_ref:
         description: Immutable commit SHA or branch to verify
         required: true
@@ -35,7 +35,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: quantumdft-verify-${{ github.ref }}
+  group: espressodft-verify-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:

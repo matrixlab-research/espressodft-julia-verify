@@ -1,6 +1,6 @@
-name = "QuantumDFTVerify"
+name = "EspressoDFTVerify"
 uuid = "df9b6be2-9af5-4916-ac6b-33a90a5b3645"
-authors = ["QuantumDFT verification maintainers"]
+authors = ["EspressoDFT verification maintainers"]
 version = "0.1.0"
 
 [deps]

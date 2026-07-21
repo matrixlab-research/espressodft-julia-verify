@@ -1,6 +1,6 @@
 #!/usr/bin/env julia
 
-using QuantumDFTVerify
+using EspressoDFTVerify
 using TOML
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))

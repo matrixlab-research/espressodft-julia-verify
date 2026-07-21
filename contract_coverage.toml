@@ -1,4 +1,4 @@
-spec_id = "quantumdft-v0.2-qe7.5-2026-07-21"
+spec_id = "espressodft-v0.2-qe7.5-2026-07-21"
 contract = "taskdoc/CONTRACT.md"
 tests = "taskdoc/TESTS.md"
 

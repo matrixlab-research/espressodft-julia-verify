@@ -1,10 +1,10 @@
 using Test
 using LinearAlgebra
 using PseudoPotentialData
-using QuantumDFTVerify
+using EspressoDFTVerify
 using SHA
 using TOML
-using QuantumDFT
+using EspressoDFT
 
 const EXPECTED_EXPORTS = Set([
     :Crystal, :KSModel, :PlaneWaveBasis, :SCFOptions, :QEInput,
@@ -15,8 +15,8 @@ const EXPECTED_EXPORTS = Set([
 ])
 
 @testset "Frozen public surface" begin
-    actual = Set(names(QuantumDFT; all=false, imported=false))
-    delete!(actual, :QuantumDFT)
+    actual = Set(names(EspressoDFT; all=false, imported=false))
+    delete!(actual, :EspressoDFT)
     @test actual == EXPECTED_EXPORTS
 end
 

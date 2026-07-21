@@ -1,4 +1,4 @@
-module QuantumDFT
+module EspressoDFT
 
 using LinearAlgebra
 

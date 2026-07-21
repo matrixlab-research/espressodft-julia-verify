@@ -1,16 +1,19 @@
-# QuantumDFT — Contract (frozen V0)
+# EspressoDFT — Contract (frozen V0)
 
-> Frozen clean-room specification `quantumdft-v0.2-qe7.5-2026-07-21`.
+> Frozen clean-room specification `espressodft-v0.2-qe7.5-2026-07-21`.
 > Everything in this file is immutable for the V0 implementation task. A
 > change requires a new specification identifier and regeneration of both
 > visible and private tests.
 
 ## Deliverable and licence
 
-Deliver a standard Julia package named `QuantumDFT`, compatible with Julia
+Deliver a standard Julia package named `EspressoDFT`, compatible with Julia
 1.12 or later and licensed under MIT. It exports exactly the symbols in the
 Public API table below. Internal modules, algorithms, storage, and solver
 choices are unrestricted provided the observable contract is met.
+
+The package is an independent clean-room implementation, not an official
+Quantum ESPRESSO distribution or a project endorsed by its Foundation.
 
 The clean-room implementation boundary consists of these three documents,
 published mathematical references, the QE 7.5 user-facing input

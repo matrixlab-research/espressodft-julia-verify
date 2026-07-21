@@ -1,5 +1,5 @@
 using Test
-using QuantumDFTVerify
+using EspressoDFTVerify
 
 const ROOT = normpath(joinpath(@__DIR__, ".."))
 
@@ -9,7 +9,7 @@ const ROOT = normpath(joinpath(@__DIR__, ".."))
 end
 
 @testset "VT-002 oracle comparator rejects scientific mutations" begin
-    comparator = QuantumDFTVerify.compare_reference
+    comparator = EspressoDFTVerify.compare_reference
     @test comparator(1.0, 1.0, "fixtures.x.energy_ha")
     for (path, delta) in (
         ("fixtures.x.energy_ha", 1e-4),
@@ -28,7 +28,7 @@ end
 
 @testset "VT-003 zero-valued candidate is rejected" begin
     runner = joinpath(ROOT, "ci", "runcandidate.jl")
-    sentinel = joinpath(ROOT, "test", "sentinels", "ZeroQuantumDFT")
+    sentinel = joinpath(ROOT, "test", "sentinels", "ZeroEspressoDFT")
     command = addenv(`$(Base.julia_cmd()) --project=$ROOT $runner`,
                      "CANDIDATE_PATH" => sentinel)
     mktemp() do path, io

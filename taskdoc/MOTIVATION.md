@@ -1,6 +1,6 @@
-# QuantumDFT — Motivation
+# EspressoDFT — Motivation
 
-> Frozen clean-room specification `quantumdft-v0.2-qe7.5-2026-07-21`.
+> Frozen clean-room specification `espressodft-v0.2-qe7.5-2026-07-21`.
 > Read together with `CONTRACT.md` (the complete V0 public boundary) and
 > `TESTS.md` (visible unit and integration anchors). This document defines
 > scientific intent and invariants, not implementation technique.
@@ -10,7 +10,7 @@
 Quantum ESPRESSO (QE) is a mature reference implementation for plane-wave
 pseudopotential density-functional theory, but its public workflow is centred
 on executable-specific namelist files and a Fortran implementation that is not
-designed as a differentiable Julia library. QuantumDFT reconstructs one narrow,
+designed as a differentiable Julia library. EspressoDFT reconstructs one narrow,
 scientifically complete vertical slice in Julia under the MIT licence:
 
 1. read a documented subset of a QE 7.5 `pw.x` input;
@@ -27,6 +27,11 @@ It is not an implementation dependency. The package is implemented from this
 specification, published equations, documented formats, and independently
 generated observations; QE source and tests are outside the clean-room source
 boundary.
+
+EspressoDFT is an independent project and is neither affiliated with nor
+endorsed by the Quantum ESPRESSO Foundation. References to Quantum ESPRESSO
+identify compatibility semantics and numerical provenance, not project
+ownership or official status.
 
 ## Scientific model
 

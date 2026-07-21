@@ -2,7 +2,7 @@ const REFERENCE = load_reference()
 const STATE_CACHE = Dict{String,Any}()
 const BASIS_CACHE = Dict{String,Any}()
 
-native_masses(fixture::QEFixture) = fixture.masses_amu .* QuantumDFTVerify.AMU_TO_ELECTRON_MASS
+native_masses(fixture::QEFixture) = fixture.masses_amu .* EspressoDFTVerify.AMU_TO_ELECTRON_MASS
 
 function candidate_crystal(fixture::QEFixture)
     Crystal(
@@ -54,7 +54,7 @@ function assert_dynamical_matches(got, expected)
 end
 
 candidate_density_coefficients(gs) =
-    QuantumDFTVerify.density_coefficients(density(gs).values)
+    EspressoDFTVerify.density_coefficients(density(gs).values)
 
 function assert_density_matches(gs, fixture::QEFixture)
     expected = fixture_reference(fixture)["density_fourier"]
@@ -167,8 +167,8 @@ function qe_input_in_cell_units(fixture::QEFixture, directory::AbstractString,
     replacement = unit == :angstrom ? "CELL_PARAMETERS angstrom" : "CELL_PARAMETERS alat"
     text = replace(text, "CELL_PARAMETERS bohr" => replacement)
     for vector in eachcol(fixture.lattice_bohr)
-        old = join(QuantumDFTVerify.fmt.(vector), " ")
-        new = join(QuantumDFTVerify.fmt.(vector .* scale), " ")
+        old = join(EspressoDFTVerify.fmt.(vector), " ")
+        new = join(EspressoDFTVerify.fmt.(vector .* scale), " ")
         text = replace(text, old => new)
     end
     if unit == :alat
