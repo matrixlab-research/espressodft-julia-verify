@@ -427,7 +427,9 @@ load_reference(path::AbstractString=joinpath(@__DIR__, "..", "oracle", "referenc
     TOML.parsefile(path)
 
 function oracle_atol(path::AbstractString)
-    occursin("frequencies_cm1", path) && return 2e-1
+    # Near-zero AlN Gamma modes differ by 0.217 cm^-1 across pinned QE 7.5
+    # Linux/macOS artifacts; this remains far below the 2 cm^-1 candidate gate.
+    occursin("frequencies_cm1", path) && return 3e-1
     occursin("born_charges", path) && return 5e-5
     # QE 7.5 differs by about 1.92e-6 for the largest Si dielectric entry
     # between the pinned x86_64 Linux and aarch64 macOS artifacts. Keep the
