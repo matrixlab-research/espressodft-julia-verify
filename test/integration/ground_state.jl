@@ -26,7 +26,8 @@ end
     @test density(first).values ≈ density(second).values atol=2e-5 rtol=2e-5
     @test all(a ≈ b atol=5e-6 rtol=5e-6 for (a, b) in
               zip(eigenvalues(first), eigenvalues(second)))
-    @test occupations(first) == occupations(second)
+    @test all(a ≈ b atol=1e-12 rtol=1e-12 for (a, b) in
+              zip(occupations(first), occupations(second)))
 end
 
 @testset "PT-004 density electron-number invariant" begin
@@ -52,17 +53,22 @@ end
 end
 
 @testset "PT-006 force finite difference" begin
-    fixture = si_fixture()
-    step = 2e-3
-    plus = candidate_state(shifted_fixture(fixture, 2, (step, 0.0, 0.0)))
-    minus = candidate_state(shifted_fixture(fixture, 2, (-step, 0.0, 0.0)))
-    finite_difference = -(energy(plus) - energy(minus)) / (2step)
-    @test isapprox(forces(candidate_state(fixture))[1, 2], finite_difference;
-                   atol=5e-5, rtol=5e-5)
+    fixture = distorted_si_fixture()
+    analytic = forces(candidate_state(fixture))[1, 2]
+    @test abs(analytic) > 1e-5
+    errors = Float64[]
+    for step in (4e-3, 2e-3, 1e-3)
+        plus = candidate_state(shifted_fixture(fixture, 2, (step, 0.0, 0.0)))
+        minus = candidate_state(shifted_fixture(fixture, 2, (-step, 0.0, 0.0)))
+        finite_difference = -(energy(plus) - energy(minus)) / (2step)
+        push!(errors, abs(analytic - finite_difference))
+    end
+    @test errors[end] <= errors[1] + 2e-6
+    @test errors[end] <= 5e-5 + 5e-5abs(analytic)
 end
 
 @testset "PT-007 stress finite difference and symmetry" begin
-    fixture = si_fixture()
+    fixture = aln_fixture()
     step = 5e-4
     strain = zeros(3, 3)
     strain[1, 1] = step
@@ -72,6 +78,7 @@ end
     finite_difference = (energy(plus) - energy(minus)) / (2step * volume)
     sigma = stress(candidate_state(fixture))
     @test sigma ≈ sigma' atol=5e-8
+    @test abs(sigma[1, 1]) > 1e-6
     @test isapprox(sigma[1, 1], finite_difference; atol=5e-5, rtol=5e-5)
 end
 
@@ -88,8 +95,8 @@ end
 end
 
 @testset "PT-009 atom permutation covariance" begin
-    fixture = si_fixture()
-    permutation = [2, 1]
+    fixture = aln_fixture()
+    permutation = [3, 1, 4, 2]
     permuted = QEFixture(
         fixture.name * "-permuted", fixture.family, fixture.lattice_bohr,
         fixture.species[permutation], fixture.masses_amu[permutation],
@@ -109,9 +116,9 @@ end
     @test isapprox(energy(gs), reference["energy_ha"]; atol=1e-6, rtol=5e-8)
     @test forces(gs) ≈ rows_to_matrix(reference["forces_ha_per_bohr"])' atol=5e-6 rtol=5e-6
     @test stress(gs) ≈ rows_to_matrix(reference["stress_ha_per_bohr3"]) atol=5e-6 rtol=5e-6
-    @test !isempty(eigenvalues(gs))
+    assert_density_matches(gs, fixture)
+    assert_gamma_bands_match(gs, fixture)
     @test !isempty(occupations(gs))
-    @test all(isfinite, density(gs).values)
 end
 
 @testset "IT-002 QE-compatible and native paths agree" begin
@@ -124,5 +131,8 @@ end
         native = candidate_state(si_fixture())
         @test isapprox(energy(parsed_state), energy(native); atol=5e-7, rtol=5e-8)
         @test isapprox(energy(path_state), energy(io_state); atol=5e-7, rtol=5e-8)
+        @test forces(parsed_state) ≈ forces(native) atol=5e-6 rtol=5e-6
+        @test stress(parsed_state) ≈ stress(native) atol=5e-6 rtol=5e-6
+        assert_density_matches(parsed_state, si_fixture())
     end
 end

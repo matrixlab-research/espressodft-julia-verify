@@ -8,7 +8,7 @@ const REFERENCE = joinpath(@__DIR__, "reference.toml")
 
 function generate()
     fixtures = Dict{String,Any}()
-    for fixture in (si_fixture(), nacl_fixture())
+    for fixture in oracle_fixtures()
         @info "running pinned QE oracle" fixture=fixture.name
         fixtures[fixture.name] = run_oracle(fixture)
     end

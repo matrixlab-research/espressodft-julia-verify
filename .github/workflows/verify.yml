@@ -4,6 +4,22 @@ on:
   push:
     branches: [main]
   pull_request:
+  repository_dispatch:
+    types: [verify-candidate]
+  workflow_call:
+    inputs:
+      candidate_repository:
+        description: GitHub owner/repository for the candidate package
+        required: true
+        type: string
+      candidate_ref:
+        description: Immutable candidate commit SHA
+        required: true
+        type: string
+    secrets:
+      candidate_token:
+        description: Optional token when the candidate repository is private
+        required: false
   workflow_dispatch:
     inputs:
       candidate_repository:
@@ -33,7 +49,12 @@ jobs:
       - run: python3 ci/check_contract_coverage.py
 
   oracle:
-    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -43,14 +64,9 @@ jobs:
       - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
       - run: julia --project=. oracle/generate_reference.jl --check
 
-  candidate:
-    if: github.event_name == 'workflow_dispatch'
-    needs: [contract, oracle]
-    runs-on: macos-14
-    timeout-minutes: 180
-    env:
-      CANDIDATE_REPOSITORY: ${{ inputs.candidate_repository }}
-      CANDIDATE_REF: ${{ inputs.candidate_ref }}
+  selftest:
+    needs: contract
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
@@ -58,4 +74,28 @@ jobs:
           version: '1.12'
       - uses: julia-actions/cache@v2
       - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - run: julia --project=. test/verifier_selftest.jl
+
+  candidate:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'repository_dispatch' ||
+      github.event_name == 'workflow_call'
+    needs: [contract, selftest, oracle]
+    runs-on: macos-14
+    timeout-minutes: 180
+    env:
+      CANDIDATE_REPOSITORY: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.candidate_repository || inputs.candidate_repository }}
+      CANDIDATE_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.candidate_ref || inputs.candidate_ref }}
+      CANDIDATE_TOKEN: ${{ secrets.candidate_token || secrets.CANDIDATE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: '1.12'
+      - uses: julia-actions/cache@v2
+      - run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+      - name: Configure private candidate access
+        if: env.CANDIDATE_TOKEN != ''
+        run: git config --global url."https://x-access-token:${CANDIDATE_TOKEN}@github.com/".insteadOf "https://github.com/"
       - run: julia --project=. ci/runcandidate.jl

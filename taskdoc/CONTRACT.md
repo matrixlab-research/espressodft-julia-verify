@@ -1,6 +1,6 @@
 # QuantumDFT — Contract (frozen V0)
 
-> Frozen clean-room specification `quantumdft-v0.1-qe7.5-2026-07-21`.
+> Frozen clean-room specification `quantumdft-v0.2-qe7.5-2026-07-21`.
 > Everything in this file is immutable for the V0 implementation task. A
 > change requires a new specification identifier and regeneration of both
 > visible and private tests.
@@ -68,8 +68,11 @@ native conventions exactly once at the compatibility boundary.
   within numerically degenerate groups.
 - `density` means integrated electron number within `2e-7` and selected
   reciprocal-density coefficients within `2e-5` relative/absolute.
-- `response` means selected response-density coefficients and dynamical-matrix
-  entries within `5e-5` relative/absolute.
+- `response-density` means selected complex response-density coefficients
+  within `2e-5` relative/absolute.
+- `dynamical` means dynamical-matrix entries within `2e-9` absolute plus
+  `2e-4` relative. The absolute floor is deliberately below the `10^-6`
+  atomic-unit scale of the frozen fixtures, so an all-zero matrix cannot pass.
 - `phonon` means matching signed frequencies within `2 cm^-1` after sorting
   within degenerate groups; eigenvectors are compared by subspace projectors.
 - `polar` means Born effective charges within `5e-4` and dielectric-tensor
@@ -98,11 +101,11 @@ with QE is not required.
 | `API-013` | `density` | `density(gs)` | named tuple `(values, cell_volume)`; `density` | `values` is a real three-dimensional periodic grid |
 | `API-014` | `eigenvalues` | `eigenvalues(gs)` | vector per full k point; `band` | same k-point order as canonical full mesh |
 | `API-015` | `occupations` | `occupations(gs)` | vector per full k point; `num(1e-12,1e-12)` | occupations include spin degeneracy and integrate to electron number with k weights |
-| `API-016` | `response` | `response(gs, perturbation::AtomicDisplacement; tolerance::Real=1e-8)` | named tuple `(delta_density, residual_norm, converged)`; `response` | positive tolerance; perturbation in V0 response domain |
-| `API-017` | `dynamical_matrix` | `dynamical_matrix(gs, q::NTuple{3,<:Real}; tolerance::Real=1e-8)` | complex `3N×3N`; `response` | finite commensurate q; V0 response assumptions |
-| `API-018` | `phonon_modes` | `phonon_modes(gs, q::NTuple{3,<:Real}; tolerance::Real=1e-8)` | named tuple `(frequencies, eigenvectors)`; `phonon` | same as `dynamical_matrix` |
-| `API-019` | `born_effective_charges` | `born_effective_charges(gs; tolerance::Real=1e-8)` | real `N×3×3`; `polar` | insulating ground state; positive tolerance |
-| `API-020` | `dielectric_tensor` | `dielectric_tensor(gs; tolerance::Real=1e-8)` | symmetric real `3×3`; `polar` | insulating ground state; positive tolerance |
+| `API-016` | `response` | `response(gs, perturbation::AtomicDisplacement; tolerance::Real=1e-8, maxiter::Integer=200)` | named tuple `(delta_density, residual_norm, converged)`; `response-density` | positive tolerance and `maxiter`; perturbation in V0 response domain |
+| `API-017` | `dynamical_matrix` | `dynamical_matrix(gs, q::NTuple{3,<:Real}; tolerance::Real=1e-8, maxiter::Integer=200)` | complex `3N×3N`; `dynamical` | finite commensurate q; positive `maxiter`; V0 response assumptions |
+| `API-018` | `phonon_modes` | `phonon_modes(gs, q::NTuple{3,<:Real}; tolerance::Real=1e-8, maxiter::Integer=200)` | named tuple `(frequencies, eigenvectors)`; `phonon` | same as `dynamical_matrix` |
+| `API-019` | `born_effective_charges` | `born_effective_charges(gs; tolerance::Real=1e-8, maxiter::Integer=200)` | real `N×3×3`; `polar` | insulating ground state; positive tolerance and `maxiter` |
+| `API-020` | `dielectric_tensor` | `dielectric_tensor(gs; tolerance::Real=1e-8, maxiter::Integer=200)` | symmetric real `3×3`; `polar` | insulating ground state; positive tolerance and `maxiter` |
 
 No other symbol is exported in V0. Ordinary Base and LinearAlgebra methods
 needed for use of these objects may be defined but are not additional exports.
@@ -124,6 +127,11 @@ properties are implementation details.
 
 Arrays returned through these properties are observationally read-only:
 mutating a retrieved array must not mutate the originating object.
+
+`density(gs).values[i,j,k]` samples the periodic density at reduced coordinate
+`((i-1)/n1,(j-1)/n2,(k-1)/n3)`, where `(n1,n2,n3)=size(values)`. The complex
+`response(...).delta_density` uses the same grid and origin. This convention
+freezes low-order reciprocal coefficients without freezing an FFT library.
 
 ## Detailed behavioural clauses
 
@@ -179,10 +187,13 @@ mutating a retrieved array must not mutate the originating object.
 
 - `RSP-001`: response differentiates the converged stationary equations; it
   must not depend on how many SCF iterations happened before convergence.
-- `RSP-002`: a displacement at q maps electronic states from k to k+q; a q
-  that does not permute the full k mesh raises `ArgumentError`.
+- `RSP-002`: construction rejects `atom<1`, directions outside `1:3`, and
+  non-finite q. Evaluation rejects an atom larger than the crystal size and a
+  q that does not map electronic states from k to k+q by permuting the full
+  k mesh.
 - `RSP-003`: response residual norm is no larger than the requested tolerance
-  when `converged==true`; otherwise `response` raises `ErrorException`.
+  when `converged==true`; exhausting `maxiter` raises `ErrorException`
+  containing `did not converge` rather than returning a false result.
 - `DYN-001`: `dynamical_matrix(gs,q)` is Hermitian within `5e-8` spectral norm.
 - `DYN-002`: `D(-q) = conj(D(q))` within the response tolerance.
 - `DYN-003`: at Gamma, the returned Hermitian matrix has the acoustic sum rule
@@ -212,7 +223,8 @@ V0 accepts only plain-text `pw.x` SCF inputs with:
 - namelists `CONTROL`, `SYSTEM`, and `ELECTRONS`;
 - `calculation='scf'`, `ibrav=0`, `occupations='fixed'`, and `nspin=1`;
 - `nat`, `ntyp`, `ecutwfc`, optional `ecutrho`, optional `tot_charge=0`, and
-  `input_dft` selecting LDA or PBE;
+  `input_dft` selecting LDA or PBE, plus either `celldm(1)` in bohr or `A` in
+  angstrom when a `CELL_PARAMETERS alat` card requires a lattice scale;
 - `ATOMIC_SPECIES`, `ATOMIC_POSITIONS` in `crystal`, `bohr`, or `angstrom`,
   `CELL_PARAMETERS` in `bohr`, `angstrom`, or `alat`, and
   `K_POINTS automatic`;

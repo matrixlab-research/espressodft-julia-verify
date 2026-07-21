@@ -8,6 +8,9 @@
     @test fractional.positions ≈ cartesian.positions
     @test fractional.species == cartesian.species
     @test fractional.masses == cartesian.masses
+    lattice_copy = fractional.lattice
+    lattice_copy[1, 1] += 1
+    @test fractional.lattice ≈ fixture.lattice_bohr
 end
 
 @testset "UT-002 lattice translation canonicalization" begin
@@ -49,15 +52,38 @@ end
     @test_throws ArgumentError KSModel(crystal; pseudopotentials=pseudos, charge=1)
     @test_throws ArgumentError KSModel(crystal; pseudopotentials=pseudos, spin=:polarized)
     @test_throws ArgumentError KSModel(crystal; pseudopotentials=Dict{Symbol,String}(), xc=:lda)
+    @test_throws ArgumentError KSModel(crystal; pseudopotentials=pseudos, xc=:pbe)
+
+    mixed = PseudoFamily("sssp.mixed.sr.pbe.v1_3_0.efficiency.upf")
+    uspp = pseudofile(mixed, :Si)
+    @test occursin("USPP", read(uspp, String))
+    @test_throws ArgumentError KSModel(crystal;
+                                       pseudopotentials=Dict(:Si => uspp), xc=:pbe)
+
+    oxygen_crystal = Crystal(fixture.lattice_bohr, [:O, :O],
+                             fixture.positions_fractional;
+                             masses=fill(15.999 * QuantumDFTVerify.AMU_TO_ELECTRON_MASS, 2))
+    paw = pseudofile(mixed, :O)
+    @test occursin("PAW", read(paw, String))
+    @test_throws ArgumentError KSModel(oxygen_crystal;
+                                       pseudopotentials=Dict(:O => paw), xc=:pbe)
 end
 
 @testset "UT-006 exact plane-wave cutoff enumeration" begin
     basis = candidate_basis(si_fixture())
     @test length(basis.G_vectors) == length(basis.kpoints)
     for (k, vectors) in zip(basis.kpoints, basis.G_vectors)
-        @test all(sum(abs2, 2pi .* (inv(basis.model.crystal.lattice)' *
-                                   (collect(k) .+ collect(G)))) / 2 <=
-                  basis.Ecut + 100eps(basis.Ecut) for G in vectors)
+        reciprocal = 2pi .* inv(basis.model.crystal.lattice)'
+        radius = sqrt(2basis.Ecut) / minimum(svdvals(reciprocal))
+        ranges = ntuple(axis ->
+            floor(Int, -k[axis] - radius) - 1:ceil(Int, -k[axis] + radius) + 1, 3)
+        expected = Set{NTuple{3,Int}}()
+        for g1 in ranges[1], g2 in ranges[2], g3 in ranges[3]
+            G = (g1, g2, g3)
+            kinetic = sum(abs2, reciprocal * (collect(k) .+ collect(G))) / 2
+            kinetic <= basis.Ecut + 100eps(basis.Ecut) && push!(expected, G)
+        end
+        @test Set(vectors) == expected
     end
 end
 
@@ -72,6 +98,8 @@ end
     basis = candidate_basis(si_fixture())
     @test length(basis.kpoints) == prod(si_fixture().kgrid)
     @test length(basis.kweights) == length(basis.kpoints)
+    @test length(unique(basis.kpoints)) == length(basis.kpoints)
+    @test all(weight -> weight > 0, basis.kweights)
     @test sum(basis.kweights) ≈ 1 atol=2e-15
 end
 
@@ -95,6 +123,8 @@ end
 @testset "UT-011 displacement and q rejection" begin
     @test_throws ArgumentError AtomicDisplacement(0, 1, (0.0, 0.0, 0.0))
     @test_throws ArgumentError AtomicDisplacement(1, 4, (0.0, 0.0, 0.0))
+    @test_throws ArgumentError AtomicDisplacement(1, 1, (NaN, 0.0, 0.0))
     gs = candidate_state(si_fixture())
+    @test_throws ArgumentError response(gs, AtomicDisplacement(3, 1, (0.0, 0.0, 0.0)))
     @test_throws ArgumentError dynamical_matrix(gs, (0.2, 0.0, 0.0))
 end

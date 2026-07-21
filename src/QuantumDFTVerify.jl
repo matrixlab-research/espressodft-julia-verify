@@ -6,14 +6,21 @@ using QuantumEspresso_jll
 using SHA
 using TOML
 
-export SPEC_ID, CM1_PER_ATOMIC_FREQUENCY, QEFixture, si_fixture, nacl_fixture,
+export SPEC_ID, CM1_PER_ATOMIC_FREQUENCY, BOHR_TO_ANGSTROM, QEFixture,
+       si_fixture, nacl_fixture, aln_fixture, oracle_fixtures,
        pseudopotential_paths, pseudopotential_hashes, write_pw_input,
        run_oracle, check_reference, load_reference
 
-const SPEC_ID = "quantumdft-v0.1-qe7.5-2026-07-21"
+const SPEC_ID = "quantumdft-v0.2-qe7.5-2026-07-21"
 const QE_VERSION = "7.5.0+0"
 const AMU_TO_ELECTRON_MASS = 1822.888486209
 const CM1_PER_ATOMIC_FREQUENCY = 219474.63136320
+const BOHR_TO_ANGSTROM = 0.529177210903
+const EV_TO_HARTREE = 1 / 27.211386245988
+const DENSITY_G_SAMPLES = [
+    (0, 0, 0), (1, 0, 0), (0, 1, 0), (0, 0, 1),
+    (1, 1, 0), (1, 0, 1), (0, 1, 1), (1, 1, 1),
+]
 
 struct QEFixture
     name::String
@@ -58,6 +65,27 @@ nacl_fixture() = QEFixture(
     "PBE",
     [(0.0, 0.0, 0.0)],
 )
+
+function aln_fixture()
+    a, c, u = 5.90, 9.65, 0.382
+    lattice = [a -a / 2 0.0; 0.0 sqrt(3) * a / 2 0.0; 0.0 0.0 c]
+    QEFixture(
+        "aln-heldout",
+        "dojo.nc.sr.pbe.v0_4_1.standard.upf",
+        lattice,
+        [:Al, :Al, :N, :N],
+        [26.9815385, 26.9815385, 14.0067, 14.0067],
+        [0.0 2 / 3 0.0 2 / 3;
+         0.0 1 / 3 0.0 1 / 3;
+         0.0 1 / 2 u 1 / 2 + u],
+        60.0,
+        (4, 4, 2),
+        "PBE",
+        [(0.0, 0.0, 0.0), (0.25, 0.0, 0.0)],
+    )
+end
+
+oracle_fixtures() = (si_fixture(), nacl_fixture(), aln_fixture())
 
 function pseudopotential_paths(fixture::QEFixture)
     family = PseudoPotentialData.PseudoFamily(fixture.family)
@@ -145,6 +173,28 @@ function write_ph_input(path::AbstractString, fixture::QEFixture,
     path
 end
 
+function write_pp_input(path::AbstractString, fixture::QEFixture,
+                        outdir::AbstractString, cube_path::AbstractString)
+    plot_path = joinpath(dirname(cube_path), "density.plot")
+    open(path, "w") do io
+        println(io, "&INPUTPP")
+        println(io, "  prefix = '", fixture.name, "'")
+        println(io, "  outdir = '", outdir, "'")
+        println(io, "  filplot = '", plot_path, "'")
+        println(io, "  plot_num = 0")
+        println(io, "/")
+        println(io, "&PLOT")
+        println(io, "  nfile = 1")
+        println(io, "  filepp(1) = '", plot_path, "'")
+        println(io, "  weight(1) = 1.0")
+        println(io, "  iflag = 3")
+        println(io, "  output_format = 6")
+        println(io, "  fileout = '", cube_path, "'")
+        println(io, "/")
+    end
+    path
+end
+
 parse_fortran_float(value::AbstractString) = parse(Float64, replace(value, r"[dD]" => "E"))
 numbers(line::AbstractString) = parse_fortran_float.(getproperty.(collect(eachmatch(
     r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[EeDd][-+]?\d+)?", line)), :match))
@@ -168,11 +218,67 @@ function parse_pw_output(text::AbstractString)
     stress_rows = [numbers(stress_lines[data_start + i])[1:3] ./ 2 for i in 0:2]
     stress = reduce(hcat, stress_rows)'
 
+    gamma_bands = Float64[]
+    lines = split(text, '\n')
+    for (index, line) in pairs(lines)
+        marker = match(r"k\s*=\s*([-+0-9.]+)\s+([-+0-9.]+)\s+([-+0-9.]+).*bands \(ev\):", line)
+        marker === nothing && continue
+        k = parse.(Float64, marker.captures)
+        norm(k) <= 1e-10 || continue
+        started = false
+        for band_line in lines[index + 1:end]
+            values = numbers(band_line)
+            if isempty(values)
+                started && break
+                continue
+            end
+            occursin(r"[A-Za-z]", replace(band_line, r"[Ee][+-]?\d+" => "")) && break
+            append!(gamma_bands, values .* EV_TO_HARTREE)
+            started = true
+        end
+        break
+    end
+    isempty(gamma_bands) && error("QE pw.x output has no Gamma-point bands")
+
     Dict(
         "energy_ha" => energy_ha,
         "forces_ha_per_bohr" => [collect(forces[:, atom]) for atom in axes(forces, 2)],
         "stress_ha_per_bohr3" => [collect(stress[row, :]) for row in axes(stress, 1)],
+        "gamma_eigenvalues_ha" => gamma_bands,
     )
+end
+
+function parse_cube_density(text::AbstractString)
+    lines = split(text, '\n')
+    length(lines) >= 7 || error("QE pp.x cube output is truncated")
+    origin = numbers(lines[3])
+    length(origin) >= 4 || error("QE cube atom/origin row is malformed")
+    nat = abs(round(Int, origin[1]))
+    dims = ntuple(axis -> abs(round(Int, numbers(lines[3 + axis])[1])), 3)
+    first_value_line = 7 + nat
+    values = Float64[]
+    for line in lines[first_value_line:end]
+        append!(values, numbers(line))
+    end
+    prod(dims) == length(values) ||
+        error("QE cube density size mismatch: $(length(values)) != $(prod(dims))")
+    permutedims(reshape(values, dims[3], dims[2], dims[1]), (3, 2, 1))
+end
+
+function density_coefficients(values::AbstractArray{<:Real,3})
+    dims = size(values)
+    coefficients = Dict{String,Any}()
+    for G in DENSITY_G_SAMPLES
+        coefficient = zero(ComplexF64)
+        for i in axes(values, 1), j in axes(values, 2), k in axes(values, 3)
+            reduced = ((i - 1) / dims[1], (j - 1) / dims[2], (k - 1) / dims[3])
+            phase = -2pi * (G[1] * reduced[1] + G[2] * reduced[2] + G[3] * reduced[3])
+            coefficient += values[i, j, k] * cis(phase)
+        end
+        coefficient /= length(values)
+        coefficients[join(G, ",")] = [real(coefficient), imag(coefficient)]
+    end
+    coefficients
 end
 
 function parse_frequencies_cm1(text::AbstractString)
@@ -276,6 +382,18 @@ function run_oracle(fixture::QEFixture)
         result["ecut_ry"] = fixture.ecut_ry
         result["kgrid"] = collect(fixture.kgrid)
 
+        pp_input = joinpath(workdir, "pp.in")
+        pp_output = joinpath(workdir, "pp.out")
+        cube_path = joinpath(workdir, "density.cube")
+        write_pp_input(pp_input, fixture, outdir, cube_path)
+        run_program(QuantumEspresso_jll.pp, `-in $pp_input`, pp_output,
+                    joinpath(workdir, "pp.err"))
+        cube_density = parse_cube_density(read(cube_path, String))
+        result["density_grid"] = collect(size(cube_density))
+        result["density_fourier"] = density_coefficients(cube_density)
+        result["density_electron_count"] =
+            result["density_fourier"]["0,0,0"][1] * abs(det(fixture.lattice_bohr))
+
         phonons = Dict{String,Any}()
         for (index, q) in enumerate(fixture.q_reduced)
             ph_input = joinpath(workdir, "ph-$index.in")
@@ -309,10 +427,13 @@ load_reference(path::AbstractString=joinpath(@__DIR__, "..", "oracle", "referenc
     TOML.parsefile(path)
 
 function oracle_atol(path::AbstractString)
-    occursin("frequencies_cm1", path) && return 5e-2
+    occursin("frequencies_cm1", path) && return 2e-1
     occursin("born_charges", path) && return 5e-5
     occursin("dielectric", path) && return 1e-6
-    occursin("dynamical_", path) && return 5e-10
+    occursin("dynamical_", path) && return 3e-9
+    occursin("density_fourier", path) && return 2e-5
+    occursin("density_electron_count", path) && return 2e-6
+    occursin("gamma_eigenvalues", path) && return 5e-6
     occursin("energy_ha", path) && return 5e-8
     occursin("forces_", path) && return 5e-8
     occursin("stress_", path) && return 5e-8
@@ -345,7 +466,7 @@ end
 function check_reference(reference::AbstractDict, generated::AbstractDict)
     reference["spec_id"] == SPEC_ID || error("reference specification mismatch")
     reference["qe_version"] == QE_VERSION || error("reference QE version mismatch")
-    for fixture in (si_fixture(), nacl_fixture())
+    for fixture in oracle_fixtures()
         expected = reference["fixtures"][fixture.name]
         got = generated["fixtures"][fixture.name]
         compare_reference(got, expected, "fixtures.$(fixture.name)")

@@ -1,7 +1,7 @@
 # QuantumDFT private verification
 
 Private black-box verification for frozen specification
-`quantumdft-v0.1-qe7.5-2026-07-21`.
+`quantumdft-v0.2-qe7.5-2026-07-21`.
 
 This repository has three independent gates:
 

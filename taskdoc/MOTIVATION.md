@@ -1,6 +1,6 @@
 # QuantumDFT — Motivation
 
-> Frozen clean-room specification `quantumdft-v0.1-qe7.5-2026-07-21`.
+> Frozen clean-room specification `quantumdft-v0.2-qe7.5-2026-07-21`.
 > Read together with `CONTRACT.md` (the complete V0 public boundary) and
 > `TESTS.md` (visible unit and integration anchors). This document defines
 > scientific intent and invariants, not implementation technique.
@@ -100,6 +100,6 @@ exception naming the unsupported field or feature.
 
 V0 is complete only when every public symbol in `CONTRACT.md` has direct public
 tests, every contract clause is represented in the private verification
-matrix, and the Si, NaCl, and held-out crystal workflows in `TESTS.md` pass
+matrix, and the Si, NaCl, and low-symmetry held-out crystal workflows in `TESTS.md` pass
 against the pinned QE 7.5 oracle at fixed pseudopotential, cutoff, k mesh, q
 point, and convergence thresholds.
