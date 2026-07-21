@@ -180,7 +180,8 @@ custom rules at any granularity, but the following semantics are frozen.
   respect to the `3×N` Cartesian position matrix equals `-forces(gs)`.
 - `DIF-002`: for strain differentiation, `h(t)=(I+t*eta)h` with symmetric
   dimensionless `eta` and fixed fractional positions. At `t=0`,
-  `dE/dt = Omega * sum(stress(gs) .* eta)`.
+  `dE/dt = -Omega * sum(stress(gs) .* eta)`, following the QE convention in
+  which positive stress is compressive.
 - `DIF-003`: derivatives use the reciprocal integer G lists and FFT topology
   selected at the primal point. This frozen-topology tangent convention is
   piecewise differentiable and does not define derivatives with respect to

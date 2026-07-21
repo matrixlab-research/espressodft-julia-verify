@@ -24,7 +24,7 @@ end
         energy(candidate_state_from_geometry(fixture; lattice))
     end)
     gs = candidate_state(fixture)
-    expected = abs(det(fixture.lattice_bohr)) * sum(stress(gs) .* strain)
+    expected = -abs(det(fixture.lattice_bohr)) * sum(stress(gs) .* strain)
     @test isfinite(derivative)
     @test abs(expected) > 1e-7
     @test isapprox(derivative, expected; atol=5e-5, rtol=5e-5)
