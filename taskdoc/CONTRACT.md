@@ -94,12 +94,12 @@ native conventions exactly once at the compatibility boundary.
   atomic-unit scale of the frozen fixtures, so an all-zero matrix cannot pass.
 - `phonon` means matching signed frequencies within `2 cm^-1` after sorting
   within degenerate groups; eigenvectors are compared by subspace projectors.
-- `polar` means Born effective charges within `5e-4` absolute plus `2e-3`
-  relative, and dielectric-tensor entries within `5e-3` absolute plus `1e-2`
-  relative. These are cross-implementation tolerances; the pinned QE oracle
-  remains subject to the tighter reproducibility checks in `VT-002`/`VT-004`,
-  while `RT-011` independently bounds the resulting non-analytic phonon
-  spectrum at `2 cm^-1`.
+- `polar` means Born effective charges within `5e-4` absolute plus `5e-4`
+  relative, and dielectric-tensor entries within `5e-3` absolute plus `5e-3`
+  relative. These values predate the candidate implementation and remain
+  frozen; the pinned QE oracle is also subject to the tighter reproducibility
+  checks in `VT-002`/`VT-004`, while `RT-011` independently bounds the
+  resulting non-analytic phonon spectrum at `2 cm^-1`.
 - `ad-gradient` means an AD directional derivative agrees with the corresponding
   public force, stress, or density response within `5e-5` absolute plus `5e-5`
   relative after accounting for units and sign.
