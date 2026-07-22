@@ -2,6 +2,15 @@ const REFERENCE = load_reference()
 const STATE_CACHE = Dict{String,Any}()
 const BASIS_CACHE = Dict{String,Any}()
 
+# Cross-implementation response tolerances.  QE's two native Born algorithms
+# agree much more tightly than these bounds; the wider candidate limits cover
+# independent discretizations of NC-projector mixed derivatives.  RT-011 keeps
+# the resulting non-analytic phonon spectrum independently bounded at 2 cm^-1.
+const BORN_ATOL = 5e-4
+const BORN_RTOL = 2e-3
+const DIELECTRIC_ATOL = 5e-3
+const DIELECTRIC_RTOL = 1e-2
+
 native_masses(fixture::QEFixture) = fixture.masses_amu .* EspressoDFTVerify.AMU_TO_ELECTRON_MASS
 
 function candidate_crystal(fixture::QEFixture)
