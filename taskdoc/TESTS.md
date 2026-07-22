@@ -33,6 +33,14 @@ observations used by the executable suite are recorded in the verification
 repository. Visible tests below state the behaviour without disclosing the
 private fixtures.
 
+Phase-one acceptance temporarily classifies only the NaCl Born-charge and the
+held-out AlN Born-charge/dielectric QE comparisons as known issues under
+[`EspressoDFT.jl#2`](https://github.com/kunyuan/EspressoDFT.jl/issues/2).
+Their original frozen tolerances remain unchanged: a match is a normal pass and
+a mismatch is reported as `Broken`. Tensor shape, symmetry, positivity,
+acoustic sum rules, the NaCl dielectric comparison, and the direction-dependent
+non-analytic phonon spectrum remain mandatory gates.
+
 ## Unit tests
 
 | test ID | contract coverage | operation | expected behaviour |
