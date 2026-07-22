@@ -50,10 +50,13 @@ end
 
 @testset "VT-005 candidate CI has three invocation paths" begin
     workflow = read(joinpath(ROOT, ".github", "workflows", "verify.yml"), String)
+    runner = read(joinpath(ROOT, "ci", "runcandidate.jl"), String)
     @test occursin("workflow_dispatch:", workflow)
     @test occursin("repository_dispatch:", workflow)
     @test occursin("workflow_call:", workflow)
     @test occursin("ci/runcandidate.jl", workflow)
+    @test occursin("Manifest.toml", runner)
+    @test occursin("PRESERVE_ALL", runner)
 end
 
 @testset "VT-006 differentiability gate is executable" begin

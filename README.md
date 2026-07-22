@@ -15,8 +15,8 @@ This repository has three independent gates:
    `QuantumEspresso_jll` 7.5.0 and versioned NC-UPF artifacts, then compared to
    the checked-in observations; and
 3. **candidate verification** — a requested `EspressoDFT.jl` repository/ref is
-   installed into this project and tested only through its documented public
-   boundary.
+   injected into a disposable copy of the committed locked environment with
+   `PRESERVE_ALL`, then tested only through its documented public boundary.
 
 The candidate gate also treats the converged ground state as a differentiable
 implicit layer. A pinned ChainRules-compatible consumer checks energy/force and
