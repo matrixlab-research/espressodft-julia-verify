@@ -17,6 +17,8 @@ This repository has three independent gates:
 3. **candidate verification** — a requested `EspressoDFT.jl` repository/ref is
    injected into a disposable copy of the committed locked environment with
    `PRESERVE_ALL`, then tested only through its documented public boundary.
+   The lock includes the candidate's generic numerical dependency closure as
+   well as the verifier and oracle dependencies.
 
 The candidate gate also treats the converged ground state as a differentiable
 implicit layer. A pinned ChainRules-compatible consumer checks energy/force and

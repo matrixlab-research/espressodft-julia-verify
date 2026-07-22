@@ -64,6 +64,8 @@ end
     tests = read(joinpath(ROOT, "test", "integration", "differentiability.jl"), String)
     @test occursin("ChainRulesCore", project)
     @test occursin("Zygote", project)
+    @test all(occursin(dependency, project)
+              for dependency in ("FFTW", "Libxc_jll", "SpecialFunctions"))
     @test occursin("Zygote.gradient", tests)
     @test occursin("ChainRulesCore.rrule", tests)
     @test occursin("response(", tests)
