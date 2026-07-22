@@ -97,7 +97,8 @@ end
     @test size(charges) == (2, 3, 3)
     @test dropdims(sum(charges; dims=1); dims=1) ≈ zeros(3, 3) atol=5e-5
     for atom in 1:2
-        @test charges[atom, :, :] ≈ rows_to_matrix(expected[atom]) atol=5e-4 rtol=5e-4
+        @test isapprox(charges[atom, :, :], rows_to_matrix(expected[atom]);
+                       atol=BORN_ATOL, rtol=BORN_RTOL)
     end
 end
 
@@ -108,7 +109,7 @@ end
         fixture_reference(fixture)["phonons"]["0.0,0.0,0.0"]["dielectric"])
     @test dielectric ≈ dielectric' atol=5e-8
     @test isposdef(Hermitian(dielectric))
-    @test dielectric ≈ expected atol=5e-3 rtol=5e-3
+    @test dielectric ≈ expected atol=DIELECTRIC_ATOL rtol=DIELECTRIC_RTOL
 end
 
 @testset "RT-011 direction-dependent non-analytic correction" begin
@@ -147,8 +148,9 @@ end
     fixture = nacl_fixture()
     gs = candidate_state(fixture)
     charges, dielectric = reference_polar_tensors(fixture)
-    @test born_effective_charges(gs) ≈ charges atol=5e-4 rtol=5e-4
-    @test dielectric_tensor(gs) ≈ dielectric atol=5e-3 rtol=5e-3
+    @test born_effective_charges(gs) ≈ charges atol=BORN_ATOL rtol=BORN_RTOL
+    @test isapprox(dielectric_tensor(gs), dielectric;
+                   atol=DIELECTRIC_ATOL, rtol=DIELECTRIC_RTOL)
 end
 
 @testset "IT-005 held-out complete API denominator" begin
@@ -176,8 +178,9 @@ end
     end
 
     charges, dielectric = reference_polar_tensors(fixture)
-    @test born_effective_charges(gs) ≈ charges atol=5e-4 rtol=5e-4
-    @test dielectric_tensor(gs) ≈ dielectric atol=5e-3 rtol=5e-3
+    @test born_effective_charges(gs) ≈ charges atol=BORN_ATOL rtol=BORN_RTOL
+    @test isapprox(dielectric_tensor(gs), dielectric;
+                   atol=DIELECTRIC_ATOL, rtol=DIELECTRIC_RTOL)
 
     mktempdir() do directory
         parsed = run_qe_input(private_qe_input(fixture, directory))
