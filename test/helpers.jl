@@ -11,7 +11,7 @@ const DIELECTRIC_ATOL = 5e-3
 const DIELECTRIC_RTOL = 5e-3
 
 # Temporary phase-one exceptions tracked with measured QE 7.5 discrepancies in
-# https://github.com/kunyuan/EspressoDFT.jl/issues/2.  A value that satisfies
+# https://github.com/matrixlab-research/EspressoDFT.jl/issues/2.  A value that satisfies
 # the original frozen tolerance remains a normal pass; only a current mismatch
 # is reported as Broken, so unexpected improvement cannot be hidden.
 function assert_polar_known_issue(got, expected; atol, rtol)
