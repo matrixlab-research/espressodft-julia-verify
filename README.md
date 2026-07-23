@@ -20,11 +20,17 @@ This repository has three independent gates:
    The lock includes the candidate's generic numerical dependency closure as
    well as the verifier and oracle dependencies.
 
-The candidate gate also treats the converged ground state as a differentiable
-implicit layer. A pinned ChainRules-compatible consumer checks energy/force and
-energy/stress gradients, direct/adjoint density-response duality, selected
-second derivatives, failure semantics, and bounded pullback storage. The
-candidate is not required to depend on the verifier's AD frontend.
+The default GitHub candidate job sets `VERIFY_PROFILE=ci`. It runs the frozen
+surface, unit, ground-state property, and ground-state integration gates, which
+fit the CI time budget. The response/phonon and differentiability files are
+retained unchanged as the explicit `full` profile; they are not counted as
+passing when skipped and are intended for manually provisioned extended runs.
+
+The full candidate profile also treats the converged ground state as a
+differentiable implicit layer. A pinned ChainRules-compatible consumer checks
+energy/force and energy/stress gradients, direct/adjoint density-response
+duality, selected second derivatives, failure semantics, and bounded pullback
+storage. The candidate is not required to depend on the verifier's AD frontend.
 
 Private tests hide structures, values, and parameter combinations. They do
 not add undocumented semantics. QE source and QE tests are not copied here;
@@ -37,6 +43,10 @@ python3 ci/check_contract_coverage.py
 julia --project=. -e 'using Pkg; Pkg.instantiate()'
 julia --project=. oracle/generate_reference.jl --check
 CANDIDATE_REPOSITORY=owner/EspressoDFT.jl CANDIDATE_REF=main \
+  VERIFY_PROFILE=ci \
+  julia --project=. ci/runcandidate.jl
+CANDIDATE_REPOSITORY=owner/EspressoDFT.jl CANDIDATE_REF=main \
+  VERIFY_PROFILE=full \
   julia --project=. ci/runcandidate.jl
 ```
 

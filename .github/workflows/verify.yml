@@ -86,6 +86,7 @@ jobs:
     timeout-minutes: 180
     env:
       JULIA_NUM_THREADS: auto
+      VERIFY_PROFILE: ci
       CANDIDATE_REPOSITORY: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.candidate_repository || inputs.candidate_repository }}
       CANDIDATE_REF: ${{ github.event_name == 'repository_dispatch' && github.event.client_payload.candidate_ref || inputs.candidate_ref }}
       CANDIDATE_TOKEN: ${{ secrets.candidate_token || secrets.CANDIDATE_TOKEN }}
