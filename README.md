@@ -21,10 +21,11 @@ This repository has three independent gates:
    well as the verifier and oracle dependencies.
 
 The default GitHub candidate job sets `VERIFY_PROFILE=ci`. It runs the frozen
-surface, unit, ground-state property, and ground-state integration gates, which
-fit the CI time budget. The response/phonon and differentiability files are
-retained unchanged as the explicit `full` profile; they are not counted as
-passing when skipped and are intended for manually provisioned extended runs.
+surface, unit, ground-state property, ground-state integration, and a bounded
+real-He Gamma-response/density-AD smoke gate, which fit the CI time budget.
+The larger response/phonon and differentiability files are retained as the
+explicit `full` profile; they are not counted as passing when skipped and are
+intended for manually provisioned extended runs.
 
 The full candidate profile also treats the converged ground state as a
 differentiable implicit layer. A pinned ChainRules-compatible consumer checks

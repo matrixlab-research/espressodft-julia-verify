@@ -147,6 +147,11 @@ end
 candidate_density_coefficients(gs) =
     EspressoDFTVerify.density_coefficients(density(gs).values)
 
+function deterministic_density_cotangent(values)
+    seed = reshape(sin.(collect(1:length(values))), size(values))
+    seed ./ norm(seed)
+end
+
 function assert_density_matches(gs, fixture::QEFixture)
     expected = fixture_reference(fixture)["density_fourier"]
     got = candidate_density_coefficients(gs)
@@ -228,6 +233,28 @@ end
 
 distorted_si_fixture() = shifted_fixture(si_fixture(), 2, (0.03, -0.02, 0.01))
 
+helium_smoke_fixture() = QEFixture(
+    "he-ci-smoke",
+    "dojo.nc.sr.pbe.v0_4_1.standard.upf",
+    8.0 .* Matrix{Float64}(I, 3, 3),
+    [:He],
+    [4.002602],
+    zeros(3, 1),
+    6.0,
+    (1, 1, 1),
+    "PBE",
+    [(0.0, 0.0, 0.0)],
+)
+
+function smoke_options()
+    SCFOptions(
+        energy_tolerance=1e-8,
+        density_tolerance=1e-7,
+        maxiter=100,
+        extra_bands=1,
+    )
+end
+
 function strained_fixture(fixture::QEFixture, strain)
     lattice = (I + strain) * fixture.lattice_bohr
     QEFixture(
@@ -236,6 +263,35 @@ function strained_fixture(fixture::QEFixture, strain)
         fixture.positions_fractional, fixture.ecut_ry, fixture.kgrid,
         fixture.input_dft, fixture.q_reduced,
     )
+end
+
+function qe_input_in_position_units(fixture::QEFixture,
+                                    directory::AbstractString,
+                                    unit::Symbol)
+    unit in (:bohr, :angstrom) || throw(ArgumentError("unsupported test unit"))
+    source_path = private_qe_input(fixture, directory)
+    text = read(source_path, String)
+    cartesian = fixture.lattice_bohr * fixture.positions_fractional
+    coordinates = unit == :bohr ? cartesian :
+                  cartesian .* EspressoDFTVerify.BOHR_TO_ANGSTROM
+    lines = [
+        string(fixture.species[atom], " ",
+               join(EspressoDFTVerify.fmt.(coordinates[:, atom]), " "))
+        for atom in eachindex(fixture.species)
+    ]
+    original_lines = [
+        string(fixture.species[atom], " ",
+               join(EspressoDFTVerify.fmt.(fixture.positions_fractional[:, atom]), " "))
+        for atom in eachindex(fixture.species)
+    ]
+    text = replace(text, "ATOMIC_POSITIONS crystal" =>
+                         "ATOMIC_POSITIONS $(String(unit))")
+    for (original, replacement) in zip(original_lines, lines)
+        text = replace(text, original => replacement)
+    end
+    path = joinpath(directory, "pw-positions-$unit.in")
+    write(path, text)
+    path
 end
 
 function private_qe_input(fixture::QEFixture, directory::AbstractString)

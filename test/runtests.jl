@@ -30,6 +30,7 @@ include("helpers.jl")
 include("unit/objects.jl")
 include("unit/qe_input.jl")
 include("integration/ground_state.jl")
+include("integration/ci_smoke.jl")
 if VERIFY_PROFILE == "full"
     include("integration/response_phonons.jl")
     include("integration/differentiability.jl")
