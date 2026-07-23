@@ -25,7 +25,7 @@ on:
       candidate_repository:
         description: GitHub owner/repository for the candidate package
         required: true
-        default: kunyuan/EspressoDFT.jl
+        default: matrixlab-research/EspressoDFT.jl
       candidate_ref:
         description: Immutable commit SHA or branch to verify
         required: true

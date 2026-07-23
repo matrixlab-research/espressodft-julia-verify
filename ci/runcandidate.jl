@@ -15,7 +15,7 @@ isfile(joinpath(RUNNER_ROOT, "Manifest.toml")) ||
 Pkg.activate(RUNNER_ROOT)
 Pkg.instantiate()
 
-repository = get(ENV, "CANDIDATE_REPOSITORY", "kunyuan/EspressoDFT.jl")
+repository = get(ENV, "CANDIDATE_REPOSITORY", "matrixlab-research/EspressoDFT.jl")
 reference = get(ENV, "CANDIDATE_REF", "main")
 candidate_path = get(ENV, "CANDIDATE_PATH", "")
 
