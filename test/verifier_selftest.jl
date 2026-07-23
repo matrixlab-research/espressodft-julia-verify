@@ -61,6 +61,7 @@ end
     @test occursin("VERIFY_PROFILE", tests)
     @test occursin("(\"ci\", \"full\")", tests)
     @test occursin("VERIFY_PROFILE == \"full\"", tests)
+    @test occursin("integration/ci_smoke.jl", tests)
     @test occursin("integration/response_phonons.jl", tests)
     @test occursin("integration/differentiability.jl", tests)
     @test occursin("Manifest.toml", runner)
@@ -70,6 +71,7 @@ end
 @testset "VT-006 differentiability gate is executable" begin
     project = read(joinpath(ROOT, "Project.toml"), String)
     tests = read(joinpath(ROOT, "test", "integration", "differentiability.jl"), String)
+    smoke = read(joinpath(ROOT, "test", "integration", "ci_smoke.jl"), String)
     @test occursin("ChainRulesCore", project)
     @test occursin("Zygote", project)
     @test all(occursin(dependency, project)
@@ -80,4 +82,8 @@ end
     @test occursin("dynamical_matrix(", tests)
     @test length(collect(eachmatch(r"@testset \"AD-\d{3}", tests))) == 7
     @test occursin("@testset \"IT-006", tests)
+    @test occursin("@testset \"RT-012", smoke)
+    @test occursin("@testset \"AD-008", smoke)
+    @test occursin("Zygote.gradient", smoke)
+    @test occursin("response(", smoke)
 end

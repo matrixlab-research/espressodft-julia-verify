@@ -27,6 +27,7 @@ The visible fixtures are:
 | `nacl-visible` | polar response and LO-TO behaviour | two-atom rocksalt NaCl primitive cell; PBE NC-UPF; converged cutoff and `4×4×4` k mesh |
 | `invalid-visible` | rejection before numerical work | malformed cells, missing species, unsupported pseudopotentials, metals, spin, and non-commensurate q |
 | `heldout-low-symmetry` | private complete workflow | four-atom non-cubic polar insulator; nonzero forces/stress; anisotropic dielectric tensor; Gamma and commensurate non-Gamma q |
+| `he-ci-smoke` | bounded response and AD smoke | one-atom cubic He insulator; PBE NC-UPF; `Ecut=3 Ha`; Gamma-only electronic mesh |
 
 Exact lattice values, pseudopotential identifiers, checksums, and oracle
 observations used by the executable suite are recorded in the verification
@@ -46,13 +47,15 @@ non-analytic phonon spectrum remain mandatory gates.
 The executable suite has two explicit profiles:
 
 - `VERIFY_PROFILE=ci` runs the frozen public surface, all unit tests, all
-  ground-state property tests, and `IT-001`–`IT-002`. This is the default
-  GitHub candidate job and is the Phase-one CI gate.
-- `VERIFY_PROFILE=full` additionally runs the unchanged response/phonon
-  (`RT-*`, `IT-003`–`IT-005`) and differentiability
-  (`AD-*`, `IT-006`) files. These calculations can exceed nine hours on a
-  heavily shared 192-core node, so they are retained as manually provisioned
-  extended verification rather than a default CI requirement.
+  ground-state property tests, `IT-001`–`IT-002`, and the bounded
+  `RT-012`/`AD-008` response-and-AD smoke tests. This is the default GitHub
+  candidate job and is the Phase-one CI gate.
+- `VERIFY_PROFILE=full` additionally runs the unchanged large
+  response/phonon (`RT-001`–`RT-011`, `IT-003`–`IT-005`) and
+  differentiability (`AD-001`–`AD-007`, `IT-006`) files. These calculations
+  can exceed nine hours on a heavily shared 192-core node, so they are retained
+  as manually provisioned extended verification rather than a default CI
+  requirement.
 
 Skipping an extended file gives no pass credit, does not convert assertions to
 `Broken`, and does not alter contract coverage or frozen tolerances. An unknown
@@ -103,6 +106,7 @@ profile fails before candidate tests.
 | `AD-005` | `API-009`, `API-013`, `API-016`, `DIF-005`, `DIF-007` | contract the direct Gamma density response with a deterministic real grid cotangent and compare with the reverse gradient of the same scalar density functional | `real(dot(v,J*p))` equals `real(dot(J'*v,p))` within `ad-duality` tolerance |
 | `AD-006` | `API-011`, `API-017`, `DIF-006`, `DIF-008` | differentiate a Cartesian force component with respect to a second Cartesian position and compare with the corresponding mass-unweighted Gamma dynamical-matrix entry | sign, Cartesian/atom indexing, mass factors, and value agree within `ad-second` tolerance; the selected entry is nonzero |
 | `AD-007` | `SCF-001`, `RSP-003`, `DIF-010` | request a gradient whose primal or adjoint cannot converge under the supplied limits | `ErrorException` containing `did not converge` is raised; no zero, NaN, or truncated gradient is returned |
+| `AD-008` | `API-009`, `API-013`, `API-016`, `DIF-005`, `DIF-007` | on `he-ci-smoke`, compare one Gamma density-response contraction with its Zygote reverse gradient | the direct and reverse contractions are finite, nonzero, and agree within `ad-duality` tolerance |
 
 ## Response and phonon property tests
 
@@ -119,6 +123,7 @@ profile fails before candidate tests.
 | `RT-009` | `API-019`, `POL-001` | compute Born charges for `nacl-visible` | result shape is `2×3×3`; atomic sum vanishes within `5e-5` |
 | `RT-010` | `API-020`, `POL-002` | compute the electronic dielectric tensor for `nacl-visible` | tensor is symmetric, positive definite, and matches QE within polar tolerance |
 | `RT-011` | `POL-003` | construct direction-dependent non-analytic Gamma limits from reported polar tensors | anisotropic LO and TO limits match pinned QE-derived observations within `2 cm^-1` |
+| `RT-012` | `API-016`, `RSP-001`, `RSP-003` | solve one Gamma displacement response on `he-ci-smoke` | response converges, is finite and nonzero, preserves electron number, and fits the bounded CI profile |
 
 ## End-to-end integration tests
 
@@ -140,7 +145,7 @@ profile fails before candidate tests.
 | `VT-003` | fail-closed candidate | a local package exporting the right names but returning zero/placeholder results is rejected by the candidate runner |
 | `VT-004` | cross-platform oracle | pinned QE observations regenerate on Linux and macOS within field-specific oracle reproducibility tolerances |
 | `VT-005` | candidate integration | manual, repository-dispatch, or reusable-workflow invocation resolves the requested candidate ref, uses the locked environment, and selects the explicit bounded `ci` profile; `full` remains available for extended runs |
-| `VT-006` | AD gate integrity | the candidate environment contains a pinned AD consumer and executable `AD-*`/`IT-006` testsets that call gradient, direct response, and dynamical-matrix paths rather than satisfying coverage by prose mentions |
+| `VT-006` | AD gate integrity | the candidate environment contains a pinned AD consumer, an unconditionally included bounded response/AD smoke file, and executable extended `AD-*`/`IT-006` testsets that call gradient, direct response, and dynamical-matrix paths rather than satisfying coverage by prose mentions |
 
 ## API and clause coverage matrix
 

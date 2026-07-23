@@ -27,6 +27,13 @@ end
             @test input.model.crystal.masses ≈ native_masses(fixture) atol=2e-8
             @test input.basis.Ecut == fixture.ecut_ry / 2
         end
+        for unit in (:bohr, :angstrom)
+            input = read_qe_input(qe_input_in_position_units(
+                fixture, directory, unit))
+            @test input.model.crystal.lattice ≈ fixture.lattice_bohr atol=2e-10
+            @test input.model.crystal.positions ≈
+                  fixture.positions_fractional atol=2e-12
+        end
     end
 end
 
@@ -53,8 +60,11 @@ end
             (replace(input, "ibrav = 0" => "ibrav = 2"), "ibrav"),
             (replace(input, "occupations = 'fixed'" => "occupations = 'smearing'"), "occupations"),
             (replace(input, "nspin = 1" => "nspin = 2"), "nspin"),
+            (replace(input, "20.0\n  occupations" =>
+                            "20.0\n  ecutrho = 10.0\n  occupations"), "ecutrho"),
             (replace(input, "  nat = 2" => "  nat = 3"), "nat"),
             (replace(input, "  ecutwfc" => "  mystery_keyword = 7\n  ecutwfc"), "mystery_keyword"),
+            (replace(input, "4 4 4 0 0 0" => "4 4 4 1 0 0"), "shifted"),
             (input * "\nATOMIC_FORCES\nSi 0 0 0\nSi 0 0 0\n", "atomic_forces"),
             (replace(input, "Si 0.25 0.25 0.25" => "Ge 0.25 0.25 0.25"), "ge"),
         )

@@ -1,8 +1,3 @@
-function deterministic_density_cotangent(values)
-    seed = reshape(sin.(collect(1:length(values))), size(values))
-    seed ./ norm(seed)
-end
-
 @testset "AD-001 energy reverse gradient equals negative force" begin
     fixture = distorted_si_fixture()
     positions = cartesian_positions(fixture)

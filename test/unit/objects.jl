@@ -11,6 +11,15 @@
     lattice_copy = fractional.lattice
     lattice_copy[1, 1] += 1
     @test fractional.lattice ≈ fixture.lattice_bohr
+    position_copy = fractional.positions
+    position_copy[1, 1] += 1
+    @test fractional.positions ≈ fixture.positions_fractional
+    mass_copy = fractional.masses
+    mass_copy[1] = -1
+    @test all(>(0), fractional.masses)
+    species_copy = fractional.species
+    species_copy[1] = :Ge
+    @test fractional.species == fixture.species
 end
 
 @testset "UT-002 lattice translation canonicalization" begin
@@ -33,6 +42,10 @@ end
                                        fixture.positions_fractional; masses=[masses[1], 0.0])
     @test_throws ArgumentError Crystal(fixture.lattice_bohr, [:Si],
                                        fixture.positions_fractional; masses=masses)
+    @test_throws ArgumentError Crystal(fill(Inf, 3, 3), fixture.species,
+                                       fixture.positions_fractional; masses=masses)
+    @test_throws ArgumentError Crystal(fixture.lattice_bohr, fixture.species,
+                                       zeros(2, 2); masses=masses)
 end
 
 @testset "UT-004 valid NC-UPF LDA and PBE models" begin
@@ -53,6 +66,13 @@ end
     @test_throws ArgumentError KSModel(crystal; pseudopotentials=pseudos, spin=:polarized)
     @test_throws ArgumentError KSModel(crystal; pseudopotentials=Dict{Symbol,String}(), xc=:lda)
     @test_throws ArgumentError KSModel(crystal; pseudopotentials=pseudos, xc=:pbe)
+    @test_throws ArgumentError KSModel(
+        Crystal(fixture.lattice_bohr, [:H], zeros(3, 1);
+                masses=[EspressoDFTVerify.AMU_TO_ELECTRON_MASS]);
+        pseudopotentials=Dict(:H => pseudofile(
+            PseudoFamily("dojo.nc.sr.pbe.v0_4_1.standard.upf"), :H)),
+        xc=:pbe,
+    )
 
     mixed = PseudoFamily("sssp.mixed.sr.pbe.v1_3_0.efficiency.upf")
     uspp = pseudofile(mixed, :Si)
@@ -95,12 +115,19 @@ end
 end
 
 @testset "UT-008 full k-mesh weights" begin
-    basis = candidate_basis(si_fixture())
-    @test length(basis.kpoints) == prod(si_fixture().kgrid)
-    @test length(basis.kweights) == length(basis.kpoints)
-    @test length(unique(basis.kpoints)) == length(basis.kpoints)
-    @test all(weight -> weight > 0, basis.kweights)
-    @test sum(basis.kweights) ≈ 1 atol=2e-15
+    fixture = si_fixture()
+    model = candidate_basis(fixture).model
+    for grid in ((1, 1, 1), (2, 3, 1), fixture.kgrid)
+        basis = PlaneWaveBasis(model; Ecut=fixture.ecut_ry / 2, kgrid=grid)
+        @test length(basis.kpoints) == prod(grid)
+        @test length(basis.kweights) == length(basis.kpoints)
+        @test length(unique(basis.kpoints)) == length(basis.kpoints)
+        @test all(weight -> weight > 0, basis.kweights)
+        @test sum(basis.kweights) ≈ 1 atol=2e-15
+        observable = [sin(2pi * sum(k)) for k in basis.kpoints]
+        @test dot(basis.kweights, observable) ≈
+              dot(reverse(basis.kweights), reverse(observable)) atol=2e-15
+    end
 end
 
 @testset "UT-009 SCF option defaults and validation" begin
@@ -111,6 +138,9 @@ end
     @test defaults.extra_bands == 4
     @test_throws ArgumentError SCFOptions(maxiter=0)
     @test_throws ArgumentError SCFOptions(density_tolerance=-1)
+    @test_throws ArgumentError SCFOptions(energy_tolerance=0)
+    @test_throws ArgumentError SCFOptions(extra_bands=-1)
+    @test_throws ArgumentError SCFOptions(energy_tolerance=NaN)
 end
 
 @testset "UT-010 atomic displacement construction" begin
@@ -118,6 +148,8 @@ end
     @test displacement.atom == 2
     @test displacement.direction == 3
     @test displacement.q == (0.25, 0.25, 0.25)
+    gamma = AtomicDisplacement(1, 1, (0, 0, 0))
+    @test gamma.q === (0.0, 0.0, 0.0)
 end
 
 @testset "UT-011 displacement and q rejection" begin
