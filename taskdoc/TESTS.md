@@ -41,6 +41,23 @@ a mismatch is reported as `Broken`. Tensor shape, symmetry, positivity,
 acoustic sum rules, the NaCl dielectric comparison, and the direction-dependent
 non-analytic phonon spectrum remain mandatory gates.
 
+## Execution profiles
+
+The executable suite has two explicit profiles:
+
+- `VERIFY_PROFILE=ci` runs the frozen public surface, all unit tests, all
+  ground-state property tests, and `IT-001`–`IT-002`. This is the default
+  GitHub candidate job and is the Phase-one CI gate.
+- `VERIFY_PROFILE=full` additionally runs the unchanged response/phonon
+  (`RT-*`, `IT-003`–`IT-005`) and differentiability
+  (`AD-*`, `IT-006`) files. These calculations can exceed nine hours on a
+  heavily shared 192-core node, so they are retained as manually provisioned
+  extended verification rather than a default CI requirement.
+
+Skipping an extended file gives no pass credit, does not convert assertions to
+`Broken`, and does not alter contract coverage or frozen tolerances. An unknown
+profile fails before candidate tests.
+
 ## Unit tests
 
 | test ID | contract coverage | operation | expected behaviour |
@@ -122,7 +139,7 @@ non-analytic phonon spectrum remain mandatory gates.
 | `VT-002` | oracle comparator mutations | missing keys and above-tolerance mutations in energy, density, bands, dynamical matrices, frequencies, Born charges, and dielectric tensors are rejected |
 | `VT-003` | fail-closed candidate | a local package exporting the right names but returning zero/placeholder results is rejected by the candidate runner |
 | `VT-004` | cross-platform oracle | pinned QE observations regenerate on Linux and macOS within field-specific oracle reproducibility tolerances |
-| `VT-005` | candidate integration | manual, repository-dispatch, or reusable-workflow invocation resolves the requested candidate ref and runs the private suite after contract and oracle gates |
+| `VT-005` | candidate integration | manual, repository-dispatch, or reusable-workflow invocation resolves the requested candidate ref, uses the locked environment, and selects the explicit bounded `ci` profile; `full` remains available for extended runs |
 | `VT-006` | AD gate integrity | the candidate environment contains a pinned AD consumer and executable `AD-*`/`IT-006` testsets that call gradient, direct response, and dynamical-matrix paths rather than satisfying coverage by prose mentions |
 
 ## API and clause coverage matrix

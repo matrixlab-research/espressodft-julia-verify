@@ -30,7 +30,8 @@ end
     runner = joinpath(ROOT, "ci", "runcandidate.jl")
     sentinel = joinpath(ROOT, "test", "sentinels", "ZeroEspressoDFT")
     command = addenv(`$(Base.julia_cmd()) --project=$ROOT $runner`,
-                     "CANDIDATE_PATH" => sentinel)
+                     "CANDIDATE_PATH" => sentinel,
+                     "VERIFY_PROFILE" => "ci")
     mktemp() do path, io
         close(io)
         process = run(pipeline(ignorestatus(command), stdout=path, stderr=path))
@@ -51,10 +52,17 @@ end
 @testset "VT-005 candidate CI has three invocation paths" begin
     workflow = read(joinpath(ROOT, ".github", "workflows", "verify.yml"), String)
     runner = read(joinpath(ROOT, "ci", "runcandidate.jl"), String)
+    tests = read(joinpath(ROOT, "test", "runtests.jl"), String)
     @test occursin("workflow_dispatch:", workflow)
     @test occursin("repository_dispatch:", workflow)
     @test occursin("workflow_call:", workflow)
     @test occursin("ci/runcandidate.jl", workflow)
+    @test occursin("VERIFY_PROFILE: ci", workflow)
+    @test occursin("VERIFY_PROFILE", tests)
+    @test occursin("(\"ci\", \"full\")", tests)
+    @test occursin("VERIFY_PROFILE == \"full\"", tests)
+    @test occursin("integration/response_phonons.jl", tests)
+    @test occursin("integration/differentiability.jl", tests)
     @test occursin("Manifest.toml", runner)
     @test occursin("PRESERVE_ALL", runner)
 end
