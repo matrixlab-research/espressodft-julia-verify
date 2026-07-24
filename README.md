@@ -1,6 +1,6 @@
-# EspressoDFT private verification
+# EspressoDFT verification
 
-Private black-box verification for frozen specification
+Public black-box verification for frozen specification
 `espressodft-v0.3-qe7.5-2026-07-21`.
 
 EspressoDFT is an independent MIT-licensed clean-room project. It is not
@@ -33,9 +33,8 @@ energy/force and energy/stress gradients, direct/adjoint density-response
 duality, selected second derivatives, failure semantics, and bounded pullback
 storage. The candidate is not required to depend on the verifier's AD frontend.
 
-Private tests hide structures, values, and parameter combinations. They do
-not add undocumented semantics. QE source and QE tests are not copied here;
-QE is executed as a pinned black-box oracle.
+The verifier keeps implementation and oracle concerns separate. QE source and
+QE tests are not copied here; QE is executed as a pinned black-box oracle.
 
 ## Local commands
 
