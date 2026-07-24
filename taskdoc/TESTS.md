@@ -94,6 +94,7 @@ profile fails before candidate tests.
 | `PT-007` | `API-012`, `OBS-003` | apply symmetric cell strains and compare energy differences | negative finite-difference energy derivative converges to the QE-convention `stress(gs)` and the tensor is symmetric |
 | `PT-008` | `API-014`, `API-015`, `OBS-005` | inspect eigenvalues and occupations on the full mesh | outer lengths equal number of full k points; band lengths pair; weighted occupations equal electron count |
 | `PT-009` | `SCF-005` | permute atoms consistently in the crystal and pseudopotential mapping | energy is unchanged; forces and atom-indexed data undergo only the corresponding permutation |
+| `PT-010` | `API-009`, `SCF-001`, `SCF-002` | inspect the converged Si SCF diagnostics and mutate returned history copies | energy/density histories are finite, bounded to at most 40 iterations, end at the returned energy and requested residual, contract from the initial residual, and cannot mutate the stored state |
 
 ## Differentiability property tests
 
